@@ -200,6 +200,11 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+  //need to test preemption here after
+  //the call to thread_unblock() 
+  // thread_unblock() is just a built-in function 
+  
+
 
   return tid;
 }
@@ -335,7 +340,14 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+
+  //thread_current ()->priority = new_priority;
+  //above line was previous code that was wrong 
+
+  if(thread_mlfqs) return;
+
+  enum intr_level old_level = intr_disable();
+
 }
 
 /* Returns the current thread's priority. */
