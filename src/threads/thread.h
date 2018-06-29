@@ -3,6 +3,8 @@
 
 #include <debug.h>
 #include <list.h>
+#include "synch.h"
+#include "switch.h"
 #include <stdint.h>
 
 /* States in a thread's life cycle. */
@@ -89,7 +91,8 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
-
+    struct list_elem donationElem;
+    
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
@@ -137,5 +140,36 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+//new code added below 
+//above is code that was already there 
+// need to determine what threads should go next, need five
+//functions to do that effectively 
+
+
+//function greater_than_31 implements the thread that should go next because 
+//higher numbers mean a larger priority
+//31 is the default assignment for priority in PintOS
+
+
+bool greater_than_31(const struct list_elem *x ,const struct list_elem *y,void *aux UNUSED );
+
+//implementation of lower priority threads
+bool less_than_31(const struct list_elem *x ,const struct list_elem *y,void *aux UNUSED);
+
+//function let_higher_go_first allows the greater_than_31() to be 
+//executed before less_than_31()
+void let_higher_go_first(void);
+
+//updates threads with higher priority to change list_entry()'s , implemented in thread.c
+bool update_priority(const struct list_elem *x ,const struct list_elem *y,void *aux UNUSED);
+
+
+
+
+
+
+
+
 
 #endif /* threads/thread.h */
