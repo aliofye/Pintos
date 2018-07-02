@@ -72,6 +72,13 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
+//marco 
+bool greater_than_31(const struct list_elem *x ,const struct list_elem *y,void *aux UNUSED );
+bool less_than_31(const struct list_elem *x ,const struct list_elem *y,void *aux UNUSED);
+void let_higher_go_first(void);
+bool update_priority(const struct list_elem *x ,const struct list_elem *y,void *aux UNUSED);
+//polo 
+
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -101,6 +108,130 @@ thread_init (void)
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
 }
+//*********MARCO!!************* 
+
+
+bool greater_than_31(const struct list_elem *x ,const struct list_elem *y,void *aux UNUSED )
+// determines whether or not thread x's priority is higher than thread y's 
+{
+  struct thread *xx = list_entry (x, struct thread, elem) ;
+  struct thread *yy = list_entry (y, struct thread, elem) ;
+
+  if(xx->priority > yy->priority)
+  {
+    return true;
+  }
+
+  else if(xx->priority < yy->priority)
+  {
+    return false;
+  }
+
+  else if(xx->priority == yy->priority)
+  {
+    return true;
+  }
+  else
+  {
+    return true;
+  }
+
+}
+
+bool less_than_31(const struct list_elem *x ,const struct list_elem *y,void *aux UNUSED)
+// determines whether or not thread x's priority is less than thread y's
+{
+
+  struct thread *xx = list_entry (x, struct thread, elem) ;
+  struct thread *yy = list_entry (y, struct thread, elem) ;
+
+  if(xx->priority < yy->priority)
+  {
+    return true;
+  }
+
+  else if(xx->priority > yy->priority)
+  {
+    return false;
+  }
+
+  else if(xx->priority == yy->priority)
+  {
+    return true;
+  }
+  else
+  {
+    return true;
+  }
+
+  
+}
+
+void let_higher_go_first(void)
+//calls to find the current running thread and
+//looks in the list_entry() to see if there is a thread that
+//has a higher priority than the current thread's priority 
+//
+
+{
+  enum intr_level old_level = intr_disable ();
+
+
+  if (!list_empty (&ready_list)) 
+  {
+    struct thread *current = thread_current ();
+    struct thread *maximum = list_entry (list_max (&ready_list,less_than_31, NULL), struct thread, elem);
+    if (maximum->priority > current->priority) 
+    {
+
+      if (intr_context ()) 
+        intr_yield_on_return ();
+
+      else if(true)
+        thread_yield ();
+    } 
+  }
+  //if there isn't a higher one in the list
+  
+  else 
+    intr_set_level (old_level);
+
+
+
+}
+
+
+bool update_priority(const struct list_elem *x ,const struct list_elem *y,void *aux UNUSED)
+//deals with all cases of the two inputted threads and returns a boolean result of 
+//which thread has a higher priority
+{
+
+  struct thread *xx =list_entry(x,struct thread, donationElem);
+  struct thread *yy =list_entry(y,struct thread,donationElem);
+
+  if(xx->priority < yy->priority)
+  {
+    return true;
+  }
+
+  else if(xx->priority > yy->priority)
+  {
+    return false;
+  }
+
+  else if(xx->priority == yy->priority)
+  {
+    return true;
+  }
+  else
+  {
+    return true;
+  }
+
+
+}
+//*****POLO!!************
+
 
 /* Starts preemptive thread scheduling by enabling interrupts.
    Also creates the idle thread. */
@@ -244,6 +375,11 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+  //need to test preemption here after
+  //the call to thread_unblock() 
+  // thread_unblock() is just a built-in function 
+  
+
 
   return tid;
 }
@@ -379,7 +515,14 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+
+  //thread_current ()->priority = new_priority;
+  //above line was previous code that was wrong 
+
+  if(thread_mlfqs) return;
+
+  enum intr_level old_level = intr_disable();
+
 }
 
 /* Returns the current thread's priority. */
