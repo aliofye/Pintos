@@ -91,8 +91,11 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
+ //Henry_b_vm
     struct list_elem donationElem;
     
+    int64_t sleeping_ticks;
+ //project1
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
@@ -109,7 +112,9 @@ struct thread
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
-
+void thread_sleep (int64_t ticks);
+void thread_wake (int64_t ticks);
+bool thread_compare_ticks(const struct list_elem *a, const struct list_elem *b);
 void thread_init (void);
 void thread_start (void);
 
