@@ -71,12 +71,12 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
-//marco 
+//***MARCO 
 bool greater_than_31(const struct list_elem *x ,const struct list_elem *y,void *aux UNUSED );
 bool less_than_31(const struct list_elem *x ,const struct list_elem *y,void *aux UNUSED);
 void let_higher_go_first(void);
 bool update_priority(const struct list_elem *x ,const struct list_elem *y,void *aux UNUSED);
-//polo 
+//***POLO
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -186,7 +186,9 @@ void let_higher_go_first(void)
         intr_yield_on_return ();
 
       else if(true)
-        thread_yield ();
+        thread_yield (); //make the thread go from running to ready state
+      else 
+        intr_set_level(old_level);
     } 
   }
   //if there isn't a higher one in the list
@@ -303,7 +305,15 @@ thread_create (const char *name, int priority,
   struct switch_threads_frame *sf;
   tid_t tid;
 
+  //make interrupt level the old level 
+  enum intr_level old_level; 
+
+
+
   ASSERT (function != NULL);
+
+  ASSERT (priority <= 63)  
+  ASSERT (priority>=0)   //assert that the priority is within the correct range
 
   /* Allocate thread. */
   t = palloc_get_page (PAL_ZERO);
@@ -313,6 +323,9 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
+
+  //disable old_level 
+  old_level=intr_disable();
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -329,11 +342,21 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
+  intr_set_level(old_level); //change the level back to what it prev was 
+
   /* Add to run queue. */
   thread_unblock (t);
   //need to test preemption here after
   //the call to thread_unblock() 
   // thread_unblock() is just a built-in function 
+
+  //must make call to let_higher_go_first() 
+  if(priority > thread_current()->priority)
+    let_higher_go_first(); //call to make sure that it doesn't execute when running test
+  else if(priority > thread_current()->priority)
+    printf("this shouldn't be executing");
+    
+
   
 
 
@@ -371,9 +394,16 @@ thread_unblock (struct thread *t)
 
   ASSERT (is_thread (t));
 
+ 
+
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  //list_push_back (&ready_list, &t->elem); was previous code but is wrong 
+
+  list_insert_ordered(&ready_list, &t->elem, &let_higher_go_first, NULL);
+  //put this thread in the list, in the function let_higher_go_first() 
+  // will determine if it is the max in the list and if it is then 
+
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -444,7 +474,10 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    list_insert_ordered (&ready_list, &cur->elem,let_higher_go_first,NULL);
+  //list_push_back is wrong b/c we want to see if this thread has a high priority
+  //the thread push back just added it to the ready list and that doesn't help at all 
+
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -452,8 +485,55 @@ thread_yield (void)
 
 /* Invoke function 'func' on all threads, passing along 'aux'.
    This function must be called with interrupts off. */
+
+//****MARCO***
+void priority_new(struct thread * thr)
+//will find the new thread priority b/c the input is the thread 
+
+{
+  thr->priority =0;
+  if(!list_empty(&thr->donorList))
+  {
+    struct thread *d = list_entry(list_max(&thr->donorList,update_priority,NULL), struct thread, donationElem);
+
+    if(d->priority > thr->priority)
+      thr->priority = d->priority;
+
+    else if(thr->og_priority > thr->priority)
+      thr->priority = thr->og_priority;
+  }
+  else if(list_empty(&thr->donorList))
+  {
+    thr->priority = thr->og_priority;
+
+    if (thr->finished ==NULL)
+      //add implementation
+    
+    if(thr->finished !=NULL)
+      priority_new(thr->finished);
+
+
+  }
+    
+
+    
+    
+
+
+  
+
+
+
+
+}
+//***POLO****
+
 void
 thread_foreach (thread_action_func *func, void *aux)
+//this is the function that was a homework answer 
+//the function that calls a function on all the threads 
+//not sure why interrupts need to be off though 
+
 {
   struct list_elem *e;
 
@@ -475,9 +555,23 @@ thread_set_priority (int new_priority)
   //thread_current ()->priority = new_priority;
   //above line was previous code that was wrong 
 
-  if(thread_mlfqs) return;
+  enum intr_level old_level;
+  old_level = intr_disable();
+  struct thread * cur = thread_current();
 
-  enum intr_level old_level = intr_disable();
+  if (cur->priority != cur->og_priority) 
+  {
+    cur->og_priority = new_priority;
+  }
+  else 
+  {
+    cur->priority = new_priority;
+    cur->og_priority = new_priority;
+  }
+  list_sort(&ready_list,greater_than_31,NULL);
+  let_higher_go_first();
+  intr_set_level (old_level);
+
 
 }
 
@@ -604,12 +698,21 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-  t->priority = priority;
-  t->magic = THREAD_MAGIC;
+  //MARCO!!!
 
-  old_level = intr_disable ();
+  list_init(&t->donorList);
+  //POLO!!
+  t->priority = priority;
+  t->og_priority = priority;
+
+  t->magic = THREAD_MAGIC;
+  //semaphores must be intialized to level zero 
+  
+  //old_level = intr_disable ();
+  
+  sema_init(&t->s,0);
   list_push_back (&all_list, &t->allelem);
-  intr_set_level (old_level);
+  //intr_set_level (old_level);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

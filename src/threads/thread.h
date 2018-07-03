@@ -89,10 +89,19 @@ struct thread
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
+
+    //**MARCO!!**
     int priority;                       /* Priority. */
-    struct list_elem allelem;           /* List element for all threads list. */
     struct list_elem donationElem;
+    struct thread * finished;
+    int og_priority; 
+    struct semaphore s;
+    struct list donorList;
+    //**POLO!!**
+
+    struct list_elem allelem;           /* List element for all threads list. */
     
+
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
@@ -151,6 +160,7 @@ int thread_get_load_avg (void);
 //higher numbers mean a larger priority
 //31 is the default assignment for priority in PintOS
 
+//MARCO***
 
 bool greater_than_31(const struct list_elem *x ,const struct list_elem *y,void *aux UNUSED );
 
@@ -165,7 +175,7 @@ void let_higher_go_first(void);
 bool update_priority(const struct list_elem *x ,const struct list_elem *y,void *aux UNUSED);
 
 
-
+//POLO*******
 
 
 
