@@ -23,6 +23,7 @@
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
+static struct list sleeping_list;
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
@@ -98,6 +99,7 @@ thread_init (void)
 
   lock_init (&tid_lock);
   list_init (&ready_list);
+  list_init (&sleeping_list);
   list_init (&all_list);
 
   /* Set up a thread structure for the running thread. */
@@ -271,6 +273,48 @@ thread_tick (void)
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
 }
+
+void
+thread_sleep(int64_t ticks){
+  // Disable interrupts
+  enum intr_level old_level = intr_disable();
+  struct thread *cur = thread_current();
+  cur->sleeping_ticks = timer_ticks() + ticks;
+  // Insert thread to sleeping list
+  list_insert_ordered(&sleeping_list, &cur->elem, thread_compare_ticks, NULL);
+  // Block the thread while its sleeping
+  thread_block();
+  // Restore interrupt level
+  intr_set_level(old_level);
+}
+
+void
+thread_wake(int64_t ticks){
+  struct list_elem *le;
+  struct thread *t;
+  // Iterate through sleeping list and wake up threads
+  while(!list_empty(&sleeping_list)){
+    le = list_front(&sleeping_list);
+    t = list_entry(le, struct thread, elem);
+    if(t->sleeping_ticks <= ticks){
+      list_remove(le);
+      thread_unblock(t);
+    } else {
+      /*  If the top element of the sleeping list is
+          is still bigger than ticks then no need
+          to iterate the whole list*/
+      break;
+    }
+  }
+}
+
+bool
+thread_compare_ticks(const struct list_elem *a, const struct list_elem *b){
+  struct thread *ta = list_entry(a, struct thread, elem);
+  struct thread *tb = list_entry(b, struct thread, elem);
+  return ta->sleeping_ticks < tb->sleeping_ticks;
+}
+
 
 /* Prints thread statistics. */
 void
