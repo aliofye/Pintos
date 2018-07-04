@@ -103,6 +103,78 @@ thread_init (void)
   initial_thread->tid = allocate_tid ();
 }
 
+////*****MARCO!!!!****
+
+/* Returns true if thread a has higher priority than thread b,
+ * within a list of threads.
+ * (Brian) */
+bool
+thread_higher_priority (const struct list_elem *a_,
+                        const struct list_elem *b_,
+                         void *aux UNUSED)
+{
+  struct thread *a = list_entry (a_, struct thread, elem) ;
+  struct thread *b = list_entry (b_, struct thread, elem) ;
+
+  return a->priority > b->priority;
+}
+
+
+/* Returns true if thread a has lower priority than thread b,
+ * within a list of threads.
+ * (Brian) */
+bool
+thread_lower_priority (const struct list_elem *a_,
+                        const struct list_elem *b_,
+                         void *aux UNUSED)
+{
+  struct thread *a = list_entry (a_, struct thread, elem) ;
+  struct thread *b = list_entry (b_, struct thread, elem) ;
+
+  return a->priority < b->priority;
+}
+
+bool
+thread_donor_priority(const struct list_elem *a_,
+                        const struct list_elem *b_,
+                          void *aux UNUSED)
+{
+  struct thread *a = list_entry (a_, struct thread, donationElem);
+  struct thread *b = list_entry (b_, struct thread, donationElem);
+
+  return a->priority < b->priority;
+}
+
+
+
+/* If the ready list contains a thread with a higher priority,
+ * yields to it.
+ * (Brian) */
+void thread_yield_to_higher_priority (void)
+{
+  enum intr_level old_level = intr_disable ();
+
+  if (!list_empty (&ready_list)) {
+    struct thread *cur = thread_current ();
+    struct thread *max = list_entry (list_max (&ready_list,
+          thread_lower_priority, NULL), struct thread, elem);
+    if (max->priority > cur->priority) {
+      if (intr_context ()) {
+        intr_yield_on_return ();
+      }
+      else
+      {
+        thread_yield ();
+      }
+    }
+
+    
+  }
+  intr_set_level (old_level);
+}
+
+//*****POLO!!!!****
+
 /* Starts preemptive thread scheduling by enabling interrupts.
    Also creates the idle thread. */
 void
@@ -217,7 +289,15 @@ thread_create (const char *name, int priority,
   struct switch_threads_frame *sf;
   tid_t tid;
 
+  //MARCO!!
+  enum intr_level old_level;
+
+  ASSERT (priority >= PRI_MIN && priority <= PRI_MAX)
+  //POLO!!!
+
   ASSERT (function != NULL);
+
+
 
   /* Allocate thread. */
   t = palloc_get_page (PAL_ZERO);
@@ -227,6 +307,7 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
+  old_level=intr_disable();//HB MADE CHANGE 
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -243,8 +324,15 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
+  intr_set_level(old_level);//HB MADE CHANGE
+
   /* Add to run queue. */
   thread_unblock (t);
+  //MARCO!!
+  if (priority > thread_current()->priority) {
+    thread_yield_to_higher_priority();
+  }
+  //POLO!!!!
 
   return tid;
 }
@@ -282,7 +370,8 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  //list_push_back (&ready_list, &t->elem);
+  list_insert_ordered(&ready_list, &t->elem, &thread_higher_priority, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -352,12 +441,48 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
+  //MARCO!!!
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+  {
+    list_insert_ordered(&ready_list, &cur->elem, thread_higher_priority, NULL);
+  }
+  //POLOO!!!
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
 }
+
+//MARCO!!!
+void recompute_thread_priority (struct thread* t) {
+   t->priority = 0;
+  if(!list_empty(&t->donorList)){
+    struct thread *donor = list_entry(list_max(&t->donorList, thread_donor_priority, NULL), struct thread, donationElem);
+   
+    if (donor->priority > t->priority){
+      t->priority = donor->priority;
+    }
+    else
+    {
+      if(t->base_priority > t->priority)
+       t->priority = t->base_priority;
+    }
+  }
+  else
+  {
+    t->priority = t->base_priority;
+  }
+
+  if (t->donee != NULL)
+  {
+    recompute_thread_priority(t->donee);
+  }
+}
+
+void sort_ready_list() {
+  list_sort(&ready_list, thread_higher_priority, NULL);
+}
+
+//POLO!!!!
 
 /* Invoke function 'func' on all threads, passing along 'aux'.
    This function must be called with interrupts off. */
@@ -380,7 +505,24 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  //thread_current ()->priority = new_priority;
+  //MARCOOO!!!!**
+  enum intr_level old_level;
+  old_level = intr_disable();
+  struct thread * cur = thread_current();
+
+  if (cur->priority != cur->base_priority) {
+    cur->base_priority = new_priority;
+  }
+  else {
+    cur->priority = new_priority;
+    cur->base_priority = new_priority;
+  }
+  sort_ready_list();
+  thread_yield_to_higher_priority();
+  intr_set_level (old_level);
+
+  ////POLOOO!!!!**
 }
 
 /* Returns the current thread's priority. */
@@ -496,7 +638,7 @@ is_thread (struct thread *t)
 static void
 init_thread (struct thread *t, const char *name, int priority)
 {
-  enum intr_level old_level;
+  //enum intr_level old_level;
 
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
@@ -506,12 +648,16 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
+  list_init(&t->donorList); //HB MADE CHANGE
   t->priority = priority;
+  t->base_priority = priority; //HB MADE CHANGE
   t->magic = THREAD_MAGIC;
 
-  old_level = intr_disable ();
+  //old_level = intr_disable ();
+  sema_init(&t->sema,0); //HB MADE CHANGE
+
   list_push_back (&all_list, &t->allelem);
-  intr_set_level (old_level);
+  //intr_set_level (old_level);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
