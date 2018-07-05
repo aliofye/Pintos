@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/synch.h" //HB added 
+#include "threads/extra_functions.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -120,6 +121,7 @@ struct thread
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
+struct list ready_list; //HB MADE CHANGE
 extern bool thread_mlfqs;
 void thread_sleep (int64_t ticks);
 void thread_wake (int64_t ticks);
@@ -141,8 +143,8 @@ tid_t thread_tid (void);
 const char *thread_name (void);
 
 void thread_exit (void) NO_RETURN;
+
 void thread_yield (void);
-void recompute_thread_priority (struct thread*);
 
 /* Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func (struct thread *t, void *aux);
@@ -156,29 +158,4 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-//*********MARCO!!!!
-
-void donate_priority(struct thread*, struct thread *);
-//donate_priority is not implemented anywhere
-//the only place that it exists is here so I'm not going to use it 
-
-
-bool
-thread_higher_priority (const struct list_elem *a_,
-                        const struct list_elem *b_,
-                         void *aux UNUSED);
-
-bool
-thread_lower_priority (const struct list_elem *a_,
-                        const struct list_elem *b_,
-                         void *aux UNUSED);
-
-void thread_yield_to_higher_priority (void);
-
-bool
-thread_donor_priority(const struct list_elem *a_,
-                        const struct list_elem *b_,
-                          void *aux UNUSED);
-
-//*********POLO!!!!
 #endif /* threads/thread.h */

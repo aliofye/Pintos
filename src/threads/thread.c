@@ -13,6 +13,7 @@
 #include "threads/vaddr.h"
 #ifdef USERPROG
 #include "userprog/process.h"
+#include "threads/extra_functions.h"
 #endif
 
 //HENRY MADE A COMMENT
@@ -23,7 +24,7 @@
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
-static struct list ready_list;
+//sstatic struct list ready_list;
 static struct list sleeping_list;
 
 /* List of all processes.  Processes are added to this list
@@ -103,77 +104,6 @@ thread_init (void)
   initial_thread->tid = allocate_tid ();
 }
 
-////*****MARCO!!!!****
-
-/* Returns true if thread a has higher priority than thread b,
- * within a list of threads.
- * (Brian) */
-bool
-thread_higher_priority (const struct list_elem *a_,
-                        const struct list_elem *b_,
-                         void *aux UNUSED)
-{
-  struct thread *a = list_entry (a_, struct thread, elem) ;
-  struct thread *b = list_entry (b_, struct thread, elem) ;
-
-  return a->priority > b->priority;
-}
-
-
-/* Returns true if thread a has lower priority than thread b,
- * within a list of threads.
- * (Brian) */
-bool
-thread_lower_priority (const struct list_elem *a_,
-                        const struct list_elem *b_,
-                         void *aux UNUSED)
-{
-  struct thread *a = list_entry (a_, struct thread, elem) ;
-  struct thread *b = list_entry (b_, struct thread, elem) ;
-
-  return a->priority < b->priority;
-}
-
-bool
-thread_donor_priority(const struct list_elem *a_,
-                        const struct list_elem *b_,
-                          void *aux UNUSED)
-{
-  struct thread *a = list_entry (a_, struct thread, donationElem);
-  struct thread *b = list_entry (b_, struct thread, donationElem);
-
-  return a->priority < b->priority;
-}
-
-
-
-/* If the ready list contains a thread with a higher priority,
- * yields to it.
- * (Brian) */
-void thread_yield_to_higher_priority (void)
-{
-  enum intr_level old_level = intr_disable ();
-
-  if (!list_empty (&ready_list)) {
-    struct thread *cur = thread_current ();
-    struct thread *max = list_entry (list_max (&ready_list,
-          thread_lower_priority, NULL), struct thread, elem);
-    if (max->priority > cur->priority) {
-      if (intr_context ()) {
-        intr_yield_on_return ();
-      }
-      else
-      {
-        thread_yield ();
-      }
-    }
-
-    
-  }
-  intr_set_level (old_level);
-}
-
-//*****POLO!!!!****
 
 /* Starts preemptive thread scheduling by enabling interrupts.
    Also creates the idle thread. */
@@ -452,37 +382,6 @@ thread_yield (void)
   intr_set_level (old_level);
 }
 
-//MARCO!!!
-void recompute_thread_priority (struct thread* t) {
-   t->priority = 0;
-  if(!list_empty(&t->donorList)){
-    struct thread *donor = list_entry(list_max(&t->donorList, thread_donor_priority, NULL), struct thread, donationElem);
-   
-    if (donor->priority > t->priority){
-      t->priority = donor->priority;
-    }
-    else
-    {
-      if(t->base_priority > t->priority)
-       t->priority = t->base_priority;
-    }
-  }
-  else
-  {
-    t->priority = t->base_priority;
-  }
-
-  if (t->donee != NULL)
-  {
-    recompute_thread_priority(t->donee);
-  }
-}
-
-void sort_ready_list() {
-  list_sort(&ready_list, thread_higher_priority, NULL);
-}
-
-//POLO!!!!
 
 /* Invoke function 'func' on all threads, passing along 'aux'.
    This function must be called with interrupts off. */
@@ -509,19 +408,37 @@ thread_set_priority (int new_priority)
   //MARCOOO!!!!**
   enum intr_level old_level;
   old_level = intr_disable();
-  struct thread * cur = thread_current();
+  struct thread * cur = thread_current(); //call the current thread
+  switch(cur->priority == cur->base_priority)
+  {
+    case true:
+      //meaning that current priority and base priority 
+      // are the same because it wouldn't have donated or 
+      // if it did then there wouldn't have a priority left 
+      cur->priority = new_priority;
+      cur->base_priority = new_priority;
+    case false:
+      //this is the special case b/c 
+      //the base priority and the reg priority are not the same 
+      //this means that either the priority is higher than the base priority or
+      // that it is lower than the base priority 
+      switch(cur->priority > cur->base_priority)
+      {
+        case true:
+          cur-> base_priority = new_priority;    
+        case false:
+          cur-> base_priority = new_priority;
 
-  if (cur->priority != cur->base_priority) {
-    cur->base_priority = new_priority;
+      }
+      
   }
-  else {
-    cur->priority = new_priority;
-    cur->base_priority = new_priority;
+  
+  if(true)
+  {
+    sort_ready_list();
+    thread_yield_to_higher_priority();
+    intr_set_level (old_level);
   }
-  sort_ready_list();
-  thread_yield_to_higher_priority();
-  intr_set_level (old_level);
-
   ////POLOOO!!!!**
 }
 
