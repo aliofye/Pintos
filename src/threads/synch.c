@@ -276,8 +276,8 @@ lock_acquire (struct lock *lock)
     donor->wantsLock = lock;
     donor->donee = lock->holder;
     list_push_back(&lock->holder->donorList, &donor->donationElem);
-    recompute_thread_priority(donor);
-    sort_ready_list();
+    newPriority(donor,NULL);
+    callListSort();
   }
 
 
@@ -360,10 +360,10 @@ lock_release (struct lock *lock)
     //printf("in lock_release() second if block");
     struct thread *thrd = list_entry (list_begin(&lock->semaphore.waiters), struct thread, elem);
     list_remove(&thrd->donationElem);
-    recompute_thread_priority(thrd);
+    newPriority(thrd,NULL);
     thrd->donee = NULL;
     thrd->wantsLock = NULL;
-    sort_ready_list();
+    callListSort();
   }
 
   

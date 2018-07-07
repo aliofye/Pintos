@@ -435,7 +435,7 @@ thread_set_priority (int new_priority)
   
   if(true)
   {
-    sort_ready_list();
+    callListSort();
     let_higher_go_first();
     intr_set_level (old_level);
   }

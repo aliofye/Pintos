@@ -18,52 +18,32 @@
 #endif
 
 
+bool donorUpdate(const struct list_elem *a,const struct list_elem *b)
+
+{
+  return makeDecisions(a,b,false,false);
+}
+
+
 bool doesFirstThreadHaveHigherPriority (const struct list_elem *a,const struct list_elem *b)
 //
 {
 	return makeDecisions(a,b, true,true);
-  /*struct thread *aa = list_entry (a, struct thread, elem) ;
-  struct thread *bb = list_entry (b, struct thread, elem) ;
-
-
-  switch(aa->priority < bb->priority)
-  {
-  	case true:
-  		return false;
-  	case false:
-  		break;
-
-  }
-  return true; */
-
+  
 
 }
 
 
 
-bool thread_lower_priority (const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)
+bool doesFirstThreadHaveLowerPriority (const struct list_elem *a,const struct list_elem *b)
 {
 	return makeDecisions(a,b, false,true);
-
- /* struct thread *aa = list_entry (a, struct thread, elem) ;
-  struct thread *bb = list_entry (b, struct thread, elem) ;
-
-  //return a->priority < b->priority;
-
-  switch(aa->priority > bb->priority)
-  {
-  	case true: //happens when the aa has a greater priority, which is wrong in 
-  		break; //this case because we want it to have lower 
-  	case false: 
-  		//printf("this happens when the bb thread has a greater priority")
-  		return true;
-  }
-  return false; */
 
 
 }
 
 bool makeDecisions(const struct list_elem *a,const struct list_elem *b, bool shouldRightbeHigher, bool isjustelem)
+//gets called by doesFirstThreadHaveLowerPriority(), doesFirstThreadHaveHigherPriority(), donorUpdate()
 {
 
 
@@ -115,37 +95,13 @@ bool makeDecisions(const struct list_elem *a,const struct list_elem *b, bool sho
 
 }
 
-bool thread_donor_priority(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)
-
-{
-	return makeDecisions(a,b,false,false);
-	/*
-  struct thread *aa = list_entry (a, struct thread, donationElem);
-  struct thread *bb = list_entry (b, struct thread, donationElem);
-
-  //return a->priority < b->priority;
-
-  switch(aa->priority > bb->priority)
-  {
-  	case true:
-  		break;
-  	case false:
-  		return true;
-
-  }
-  return false;*/
-}
-
-
-
-
 void let_higher_go_first (void)
 //compares the current thread to the max priority thread 
 //and calls thread_yield to select a new thread to run if necessary
 {
   enum intr_level old_level = intr_disable ();
   struct thread *c = thread_current ();
-  struct thread *m = list_entry (list_max (&ready_list,thread_lower_priority, NULL), struct thread, elem);
+  struct thread *m = list_entry (list_max (&ready_list,doesFirstThreadHaveLowerPriority, NULL), struct thread, elem);
 
   if (!list_empty (&ready_list)) 
   {
@@ -175,7 +131,7 @@ void let_higher_go_first (void)
   intr_set_level (old_level);
 }
 
-void recompute_thread_priority (struct thread* t )
+void newPriority (struct thread* t, void *aux UNUSED)
 //uses recursion to make find a thread that the inputted thread will
 //donate its priority to using ____ struct 
 {
@@ -184,7 +140,7 @@ void recompute_thread_priority (struct thread* t )
 
   if(!list_empty(&t->donorList))
   {
-    struct thread *donor = list_entry(list_max(&t->donorList, thread_donor_priority, NULL), struct thread, donationElem);
+    struct thread *donor = list_entry(list_max(&t->donorList, donorUpdate, NULL), struct thread, donationElem);
    
     //if (donor->priority > t->priority){
     //  t->priority = donor->priority;
@@ -220,7 +176,7 @@ void recompute_thread_priority (struct thread* t )
   	//computes whether or not the thread t has actually donated anything, if it
   	//hasn't then call the function again recursively 
   {
-    recompute_thread_priority(t->donee); 
+    newPriority(t->donee,NULL); 
   }
   if(t->donee ==NULL)
   {
@@ -228,7 +184,7 @@ void recompute_thread_priority (struct thread* t )
   }
 }
 
-void sort_ready_list()
+void callListSort()
 {
 	list_sort(&ready_list, doesFirstThreadHaveHigherPriority, NULL);
 }
