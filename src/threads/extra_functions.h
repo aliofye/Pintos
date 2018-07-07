@@ -5,7 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/synch.h" //HB added 
-#include "threads/thread.h"
+//#include "threads/thread.h" //this was causing errors
 
 void donate_priority(struct thread*, struct thread *);
 //donate_priority is not implemented anywhere
@@ -26,8 +26,6 @@ bool makeDecisions(const struct list_elem *a,const struct list_elem *b,void *aux
 void recompute_thread_priority (struct thread*);
 
 void sort_ready_list(void);
-
-//bool waiter_higher_priority (struct list_elem *_a,struct list_elem *_b,void *aux UNUSED);
 
 
 
