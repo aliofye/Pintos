@@ -74,7 +74,7 @@ sema_down (struct semaphore *sema)
     {
       //list_push_back (&sema->waiters, &thread_current ()->elem);
       //HB MADE BELOW CHANGE
-      list_insert_ordered(&sema->waiters, &thread_current ()->elem, thread_higher_priority, NULL);
+      list_insert_ordered(&sema->waiters, &thread_current ()->elem, doesFirstThreadHaveHigherPriority, NULL);
 
       thread_block ();
     }
@@ -127,7 +127,7 @@ sema_up (struct semaphore *sema)
     //and unblock it 
   {
     //MARCO!!!
-    list_sort(&sema->waiters,thread_higher_priority,NULL); //sorts 
+    list_sort(&sema->waiters,doesFirstThreadHaveHigherPriority,NULL); //sorts 
     //list to find the most needy semaphore
     t=list_entry(list_pop_front(&sema->waiters), struct thread, elem);
     //finds the correct list entry and unblocks it
@@ -154,7 +154,7 @@ sema_up (struct semaphore *sema)
     //running semaphore 
     //calls thread_yield in this function if needed b/c a new thread 
     //might need to commence to run 
-    thread_yield_to_higher_priority();
+    let_higher_go_first();
   }
 
   //POLO!!*****

@@ -18,10 +18,10 @@
 #endif
 
 
-bool thread_higher_priority (const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)
+bool doesFirstThreadHaveHigherPriority (const struct list_elem *a,const struct list_elem *b)
 //
 {
-	return makeDecisions(a,b, aux , true,true);
+	return makeDecisions(a,b, true,true);
   /*struct thread *aa = list_entry (a, struct thread, elem) ;
   struct thread *bb = list_entry (b, struct thread, elem) ;
 
@@ -43,7 +43,7 @@ bool thread_higher_priority (const struct list_elem *a,const struct list_elem *b
 
 bool thread_lower_priority (const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)
 {
-	return makeDecisions(a,b, aux, false,true);
+	return makeDecisions(a,b, false,true);
 
  /* struct thread *aa = list_entry (a, struct thread, elem) ;
   struct thread *bb = list_entry (b, struct thread, elem) ;
@@ -63,7 +63,7 @@ bool thread_lower_priority (const struct list_elem *a,const struct list_elem *b,
 
 }
 
-bool makeDecisions(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED, bool shouldRightbeHigher, bool isjustelem)
+bool makeDecisions(const struct list_elem *a,const struct list_elem *b, bool shouldRightbeHigher, bool isjustelem)
 {
 
 
@@ -118,7 +118,7 @@ bool makeDecisions(const struct list_elem *a,const struct list_elem *b,void *aux
 bool thread_donor_priority(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)
 
 {
-	return makeDecisions(a,b,aux,false,false);
+	return makeDecisions(a,b,false,false);
 	/*
   struct thread *aa = list_entry (a, struct thread, donationElem);
   struct thread *bb = list_entry (b, struct thread, donationElem);
@@ -139,7 +139,7 @@ bool thread_donor_priority(const struct list_elem *a,const struct list_elem *b,v
 
 
 
-void thread_yield_to_higher_priority (void)
+void let_higher_go_first (void)
 //compares the current thread to the max priority thread 
 //and calls thread_yield to select a new thread to run if necessary
 {
@@ -230,7 +230,7 @@ void recompute_thread_priority (struct thread* t )
 
 void sort_ready_list()
 {
-	list_sort(&ready_list, thread_higher_priority, NULL);
+	list_sort(&ready_list, doesFirstThreadHaveHigherPriority, NULL);
 }
 
 

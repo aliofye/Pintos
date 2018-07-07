@@ -12,16 +12,17 @@ void donate_priority(struct thread*, struct thread *);
 //the only place that it exists is here so I'm not going to use it 
 
 
-bool thread_higher_priority (const struct list_elem *a,const struct list_elem *b,void *aux UNUSED);
+bool doesFirstThreadHaveHigherPriority 
+	(const struct list_elem *a,const struct list_elem *b); //HB MADE CHANGE
 
-bool
-thread_lower_priority (const struct list_elem *a,const struct list_elem *b,void *aux UNUSED);
+bool thread_lower_priority 
+	(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED);
 
-void thread_yield_to_higher_priority (void);
+void let_higher_go_first (void); //HB MADE CHANGE
 
 bool thread_donor_priority(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED);
 
-bool makeDecisions(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED, bool shouldRightbeHigher, bool isjustelem);
+bool makeDecisions(const struct list_elem *a,const struct list_elem *b, bool shouldRightbeHigher, bool isjustelem);
 
 void recompute_thread_priority (struct thread*);
 

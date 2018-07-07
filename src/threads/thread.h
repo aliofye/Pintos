@@ -79,7 +79,8 @@ typedef int tid_t;
 /* The `elem' member has a dual purpose.  It can be an element in
    the run queue (thread.c), or it can be an element in a
    semaphore wait list (synch.c).  It can be used these two ways
-   only because they are mutually exclusive: only a thread in the
+   only because they are mutually exclus
+   ive: only a thread in the
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list. */
 struct thread

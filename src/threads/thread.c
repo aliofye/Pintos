@@ -260,7 +260,7 @@ thread_create (const char *name, int priority,
   thread_unblock (t);
   //MARCO!!
   if (priority > thread_current()->priority) {
-    thread_yield_to_higher_priority();
+    let_higher_go_first();
   }
   //POLO!!!!
 
@@ -301,7 +301,7 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   //list_push_back (&ready_list, &t->elem);
-  list_insert_ordered(&ready_list, &t->elem, &thread_higher_priority, NULL);
+  list_insert_ordered(&ready_list, &t->elem, &doesFirstThreadHaveHigherPriority, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -374,7 +374,7 @@ thread_yield (void)
   //MARCO!!!
   if (cur != idle_thread) 
   {
-    list_insert_ordered(&ready_list, &cur->elem, thread_higher_priority, NULL);
+    list_insert_ordered(&ready_list, &cur->elem, doesFirstThreadHaveHigherPriority, NULL);
   }
   //POLOO!!!
   cur->status = THREAD_READY;
@@ -436,7 +436,7 @@ thread_set_priority (int new_priority)
   if(true)
   {
     sort_ready_list();
-    thread_yield_to_higher_priority();
+    let_higher_go_first();
     intr_set_level (old_level);
   }
   ////POLOOO!!!!**
