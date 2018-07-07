@@ -17,6 +17,8 @@
 #include "userprog/process.h"
 #endif
 
+//new file, the .c WAS  added in makefile b/c it's necessary
+
 
 bool donorUpdate(const struct list_elem *a,const struct list_elem *b)
 
@@ -131,7 +133,7 @@ void let_higher_go_first (void)
   intr_set_level (old_level);
 }
 
-void newPriority (struct thread* t, void *aux UNUSED)
+void newPriority (struct thread* t, void *ls UNUSED)
 //uses recursion to make find a thread that the inputted thread will
 //donate its priority to using ____ struct 
 {
@@ -185,6 +187,7 @@ void newPriority (struct thread* t, void *aux UNUSED)
 }
 
 void callListSort()
+//calls list_sort using doesFirstThreadHaveHigherPriority
 {
 	list_sort(&ready_list, doesFirstThreadHaveHigherPriority, NULL);
 }

@@ -413,7 +413,7 @@ cond_init (struct condition *cond)
 }
 
 //*****MARCO********
-bool waiter_higher_priority (struct list_elem *a,struct list_elem *b)
+bool createSemElem (struct list_elem *a,struct list_elem *b, void * ls UNUSED)
 //cannot be moved b/c it contains a semaphore_elem and semaphore_elem's only 
 //exist in this file and no others b/c of prev. discussion
 //takes two inputted list elements and returns a created the created
@@ -471,7 +471,7 @@ cond_wait (struct condition *cond, struct lock *lock)
   sema_init (&waiter.semaphore, 0);
   //MARCO!!
   waiter.priority = thread_current()->priority;
-  list_insert_ordered(&cond->waiters, &waiter.elem, waiter_higher_priority, NULL);
+  list_insert_ordered(&cond->waiters, &waiter.elem, createSemElem, NULL);
   list_push_back (&cond->waiters, &waiter.elem);
   //POLO!!!
   lock_release (lock);

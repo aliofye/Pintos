@@ -31,6 +31,9 @@ bool lock_try_acquire (struct lock *);
 void lock_release (struct lock *);
 bool lock_held_by_current_thread (const struct lock *);
 
+bool createSemElem (struct list_elem *a,struct list_elem *b, void *ls UNUSED);
+
+
 /* Condition variable. */
 struct condition 
   {

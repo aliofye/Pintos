@@ -7,6 +7,9 @@
 #include "threads/synch.h" //HB added 
 //#include "threads/thread.h" //this was causing errors
 
+//new file, the .h isn't  added in makefile b/c it's unnecessary 
+
+
 
 
 bool doesFirstThreadHaveHigherPriority 
@@ -22,7 +25,7 @@ bool donorUpdate(const struct list_elem *a,const struct list_elem *b); //HB MADE
 bool makeDecisions
 (const struct list_elem *a,const struct list_elem *b, bool shouldRightbeHigher, bool isjustelem); //HB MADE CHANGE
 
-void newPriority (struct thread*, void * aux UNUSED); //HB MADE CHANGE
+void newPriority (struct thread*, void * ls UNUSED); //HB MADE CHANGE
 
 void callListSort(void); //HB MADE CHANGE
 
