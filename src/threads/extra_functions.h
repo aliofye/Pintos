@@ -27,6 +27,8 @@ void recompute_thread_priority (struct thread*);
 
 void sort_ready_list(void);
 
+//bool waiter_higher_priority (struct list_elem *_a,struct list_elem *_b,void *aux UNUSED);
+
 
 
 #endif

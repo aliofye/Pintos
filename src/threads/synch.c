@@ -33,6 +33,9 @@
 #include "threads/thread.h"
 #include "threads/extra_functions.h"
 
+
+
+
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -119,18 +122,38 @@ sema_up (struct semaphore *sema)
 
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters)) 
+    //meaning that the list of waiting semaphores isn't empty 
+    //so we need to take the one off the front of the list 
+    //and unblock it 
   {
     //MARCO!!!
-    list_sort(&sema->waiters,thread_higher_priority,NULL);
+    list_sort(&sema->waiters,thread_higher_priority,NULL); //sorts 
+    //list to find the most needy semaphore
     t=list_entry(list_pop_front(&sema->waiters), struct thread, elem);
+    //finds the correct list entry and unblocks it
     thread_unblock(t);
-
     //POLO!!!
   }
 
   sema->value++;
   //MARCO!!
-  if (t != NULL && t->priority > thread_current()->priority) {
+  if(t==NULL )
+  {
+    //printf("this shouldn't be executing");
+    //do nothing because we don't need to change anything 
+    //CHANGE BY HB 
+  }
+  if(thread_current()->priority > t->priority)
+  {
+    //then we don't care because the current semaphore is still executing at 
+    //a higher priority than the inputted one
+  }
+  if ((t->priority > thread_current()->priority) && t != NULL) 
+  {
+    //inputted semaphore seems to have a higher priority than the currently 
+    //running semaphore 
+    //calls thread_yield in this function if needed b/c a new thread 
+    //might need to commence to run 
     thread_yield_to_higher_priority();
   }
 
@@ -209,29 +232,60 @@ lock_init (struct lock *lock)
    we need to sleep. */
 void
 lock_acquire (struct lock *lock)
+//look at this again
+//can't seem to find a way with this one 
+//if the donor priority is greater than the lock holder 
+//priority then give the donor the lock
+//then recalculate the priority 
+
 {
-  enum intr_level old_level;//HB MADE CHANGE
+  enum intr_level old_level;
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
-  //MARCO!!!****
+
   old_level = intr_disable();
   struct thread *donor = thread_current();
-  if (lock->holder != NULL && donor->priority > lock->holder->priority) //used to kernel panic here!
+  //printf("in lock_acquire() \n");
+  //bool lockHolder = (lock->holder) ==NULL; //more testing 
+  //bool donorOverLock = donor->priority > lock->holder->priority;
+  //printf("lockHolder: ",lockHolder, "donorOverLock: ",donorOverLock, " \n");
+  int doCommand= 1;
+
+  if( !(lock->holder ==NULL) && !(donor->priority < lock->holder->priority))
   {
-    //donate!
+    doCommand = 0;
+
+    //do nothing 
+  }
+  
+   
+  switch(doCommand)
+  {
+    case 0: 
+      doCommand = 5; 
+    case 1: 
+      break;
+
+
+  }
+
+  if ( doCommand==5) 
+  {
+  
     donor->wantsLock = lock;
     donor->donee = lock->holder;
     list_push_back(&lock->holder->donorList, &donor->donationElem);
     recompute_thread_priority(donor);
     sort_ready_list();
   }
-  //POLO000!!!****
-  sema_down (&lock->semaphore);
 
-  
+
+  sema_down (&lock->semaphore);
   lock->holder = thread_current ();
-  intr_set_level(old_level); //HB MADE CHANGE
+  intr_set_level (old_level);
+
+
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -274,7 +328,36 @@ lock_release (struct lock *lock)
 
   // We have to remove the donation from the highest priority thread (the front) 
   // in our waiting list
-  if(!list_empty(&lock->semaphore.waiters)){
+
+  int doCommand=1;
+  if(list_empty(&lock->semaphore.waiters))
+  {
+
+    //it it's empty then we don't care 
+    //printf("in lock_release() first if block");
+    
+  }
+  if(!list_empty(&lock->semaphore.waiters))
+  {
+    doCommand=0;
+    //printf("doCommand should be changed here ");
+  }
+  switch(doCommand)
+  {
+    case 0: 
+      doCommand =5;
+
+    case 1 :
+      //just break b/c the case where if block doesn't get executed 
+      break;
+
+  }
+  
+  // We have to remove the donation from the highest priority thread (the front) 
+  // in our waiting list
+  if(doCommand==5)
+  {
+    //printf("in lock_release() second if block");
     struct thread *thrd = list_entry (list_begin(&lock->semaphore.waiters), struct thread, elem);
     list_remove(&thrd->donationElem);
     recompute_thread_priority(thrd);
@@ -282,11 +365,17 @@ lock_release (struct lock *lock)
     thrd->wantsLock = NULL;
     sort_ready_list();
   }
+
+  
   //POLO!!!!****
 
   lock->holder = NULL;
   sema_up (&lock->semaphore);
+
+
   intr_set_level(old_level); //HB MADE CHANGE
+  //change the interrupt level back 
+
 }
 
 /* Returns true if the current thread holds LOCK, false
@@ -302,6 +391,10 @@ lock_held_by_current_thread (const struct lock *lock)
 
 /* One semaphore in a list. */
 struct semaphore_elem 
+  //struct must be in the .c file b/c error arises
+  // if it's put in the .h b/c semaphore is already there 
+  //complicated but it must stay here 
+
   {
     int priority;
     struct list_elem elem;              /* List element. */
@@ -320,15 +413,29 @@ cond_init (struct condition *cond)
 }
 
 //*****MARCO********
-bool
-waiter_higher_priority (struct list_elem *_a,
-                        struct list_elem *_b,
-                         void *aux UNUSED)
+bool waiter_higher_priority (struct list_elem *a,struct list_elem *b)
+//cannot be moved b/c it contains a semaphore_elem and semaphore_elem's only 
+//exist in this file and no others b/c of prev. discussion
+//takes two inputted list elements and returns a created the created
+//semaphore (using the list elem) that has a higher priority 
+
 {
-  struct semaphore_elem *a, *b;
-  a = list_entry (_a, struct semaphore_elem, elem);
-  b = list_entry (_b, struct semaphore_elem, elem);
-  return a->priority > b->priority;
+  
+
+  struct semaphore_elem * aa = list_entry (a, struct semaphore_elem, elem);
+  struct semaphore_elem * bb = list_entry (b, struct semaphore_elem, elem);
+
+  switch(aa->priority <bb->priority)
+  {
+    case true: 
+      return false;
+    case false:
+      break; 
+
+  }
+
+  return true;
+
 }
 //*****POLOO********
 /* Atomically releases LOCK and waits for COND to be signaled by
@@ -407,3 +514,5 @@ cond_broadcast (struct condition *cond, struct lock *lock)
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
 }
+
+

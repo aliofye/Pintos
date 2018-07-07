@@ -5,7 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/synch.h" //HB added 
-#include "threads/extra_functions.h"
+//#include "threads/extra_functions.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -13,7 +13,7 @@ enum thread_status
     THREAD_RUNNING,     /* Running thread. */
     THREAD_READY,       /* Not running but ready to run. */
     THREAD_BLOCKED,     /* Waiting for an event to trigger. */
-    THREAD_DYING        /* About to be destroyed. */
+    THREAD_DYING        /* About to be    destroyed. */
   };
 
 /* Thread identifier type.
@@ -117,6 +117,8 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
+
+
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
