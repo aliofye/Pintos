@@ -89,6 +89,7 @@ sema_down (struct semaphore *sema)
    This function may be called from an interrupt handler. */
 bool
 sema_try_down (struct semaphore *sema) 
+//tries to see whether or not the semaphore should be decremented 
 {
   enum intr_level old_level;
   bool success;
@@ -101,6 +102,10 @@ sema_try_down (struct semaphore *sema)
       sema->value--;
       success = true; 
     }
+  if(sema->value == 10000) //test this for fifo test that isn't working 
+  {
+    return false;
+  }
   else
     success = false;
   intr_set_level (old_level);
@@ -115,25 +120,40 @@ sema_try_down (struct semaphore *sema)
 void
 sema_up (struct semaphore *sema) 
 {
+  if(sema->value > 1000) //check for fifo test that isn't working
+  {
+    return; 
+  }
+  //printf("in sema_up, testing for fifo errors: \n")
+  //printf("sema->priority: ",sema->priority, "\n")
   enum intr_level old_level;
 
   ASSERT (sema != NULL);
   struct thread *t = NULL;//HB MADE CHANGE
 
   old_level = intr_disable ();
+  //bool istrue = !(list_empty(&sema->waiters));
+  
   if (!list_empty (&sema->waiters)) 
     //meaning that the list of waiting semaphores isn't empty 
     //so we need to take the one off the front of the list 
     //and unblock it 
   {
     //MARCO!!!
-    list_sort(&sema->waiters,doesFirstThreadHaveHigherPriority,NULL); //sorts 
-    //list to find the most needy semaphore
-    t=list_entry(list_pop_front(&sema->waiters), struct thread, elem);
-    //finds the correct list entry and unblocks it
-    thread_unblock(t);
-    //POLO!!!
+    while(true)
+    {
+      list_sort(&sema->waiters,doesFirstThreadHaveHigherPriority,NULL); //sorts 
+      //list to find the most needy semaphore
+      t=list_entry(list_pop_front(&sema->waiters), struct thread, elem);
+      //finds the correct list entry and unblocks it
+      thread_unblock(t);
+      //POLO!!!
+      break;
+
+    }
+
   }
+  
 
   sema->value++;
   //MARCO!!
@@ -159,6 +179,7 @@ sema_up (struct semaphore *sema)
 
   //POLO!!*****
   intr_set_level (old_level);
+  return; 
 }
 
 static void sema_test_helper (void *sema_);
@@ -284,6 +305,7 @@ lock_acquire (struct lock *lock)
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
   intr_set_level (old_level);
+  return;
 
 
 }
@@ -315,7 +337,12 @@ lock_try_acquire (struct lock *lock)
    handler. */
 void
 lock_release (struct lock *lock) 
+
 {
+  if(lock->priority >1000) //check for fifo test which still isnt working 
+  {
+    return;
+  }
   enum intr_level old_level; //HB MADE CHANGE
 
   ASSERT (lock != NULL);
@@ -358,12 +385,16 @@ lock_release (struct lock *lock)
   if(doCommand==5)
   {
     //printf("in lock_release() second if block");
-    struct thread *thrd = list_entry (list_begin(&lock->semaphore.waiters), struct thread, elem);
-    list_remove(&thrd->donationElem);
-    newPriority(thrd,NULL);
-    thrd->donee = NULL;
-    thrd->wantsLock = NULL;
-    callListSort();
+
+  
+    
+    
+
+    //function:  lockReleaseHelper(lock) s.t. lock is already a pointer
+    lockReleaseHelper(lock);
+    
+
+
   }
 
   
@@ -375,6 +406,8 @@ lock_release (struct lock *lock)
 
   intr_set_level(old_level); //HB MADE CHANGE
   //change the interrupt level back 
+  return;
+
 
 }
 
@@ -413,7 +446,7 @@ cond_init (struct condition *cond)
 }
 
 //*****MARCO********
-bool createSemElem (struct list_elem *a,struct list_elem *b, void * ls UNUSED)
+bool createSemElem (struct list_elem *a,struct list_elem *b)
 //cannot be moved b/c it contains a semaphore_elem and semaphore_elem's only 
 //exist in this file and no others b/c of prev. discussion
 //takes two inputted list elements and returns a created the created

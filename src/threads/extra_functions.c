@@ -20,6 +20,8 @@
 //new file, the .c WAS  added in makefile b/c it's necessary
 
 
+
+
 bool donorUpdate(const struct list_elem *a,const struct list_elem *b)
 
 {
@@ -190,6 +192,17 @@ void callListSort()
 //calls list_sort using doesFirstThreadHaveHigherPriority
 {
 	list_sort(&ready_list, doesFirstThreadHaveHigherPriority, NULL);
+}
+
+void lockReleaseHelper(struct lock * lock)
+//called in synch.c in lock_release
+{
+  struct thread *t = list_entry (list_begin(&lock->semaphore.waiters), struct thread, elem);
+  list_remove(&t->donationElem);
+  newPriority(t,NULL);
+  t->donee = NULL;
+  t->wantsLock = NULL;
+  callListSort();
 }
 
 
