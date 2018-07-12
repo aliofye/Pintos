@@ -7,6 +7,7 @@
 #include "threads/synch.h" //HB added 
 //#include "threads/extra_functions.h"
 
+typedef int fixed_t; //HB mlfq
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -87,6 +88,9 @@ struct thread
   {
     /* Owned by thread.c. */
 
+    int nice;  //HB mlfq
+    fixed_t recent_cpu; //HB mlfq
+
     //MARCO!!!****
     struct semaphore sema;
     int64_t wakeup;
@@ -106,7 +110,7 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
-    int64_t sleeping_ticks;
+    int64_t sleeping_ticks;             //timer implementation
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 

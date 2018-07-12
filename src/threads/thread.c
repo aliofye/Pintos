@@ -11,10 +11,24 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fixed_point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #include "threads/extra_functions.h"
+
 #endif
+
+//mlfq MARCOOO!!***
+#define NICE_DEFAULT 0
+#define NICE_MAX 20
+#define NICE_MIN 20
+
+#define RECENT_CPU_DEFAULT 0
+
+#define LOAD_AVG_DEFAULT 0
+
+#define DEPTH_LIMIT 8
+// mlfq POLO!!!****
 
 //HENRY MADE A COMMENT
 /* Random value for struct thread's `magic' member.
@@ -61,6 +75,8 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
+int load_avg; //mlfq HB ADDED 
+
 
 static void kernel_thread (thread_func *, void *aux);
 
@@ -114,6 +130,8 @@ thread_start (void)
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
   thread_create ("idle", PRI_MIN, idle, &idle_started);
+
+  load_avg = LOAD_AVG_DEFAULT;
 
   /* Start preemptive thread scheduling. */
   intr_enable ();
@@ -445,15 +463,207 @@ thread_set_priority (int new_priority)
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void) 
+
+//simply returns the priority and nothing else 
 {
-  return thread_current ()->priority;
+
+  //mlfq MARCO!!!
+  enum intr_level old_level = intr_disable ();
+  int tmp = thread_current()->priority;
+  intr_set_level (old_level);
+  return tmp;
+  //mlfq POLO!!!
 }
 
 /* Sets the current thread's nice value to NICE. */
+
+//MLFQ MARCOO!!***
+uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+bool cmp_ticks (const struct list_elem *a,const struct list_elem *b,void *aux UNUSED) //HB ADDED 
+{
+  struct thread *ta = list_entry(a, struct thread, elem);
+  struct thread *tb = list_entry(b, struct thread, elem);
+  if (ta->sleeping_ticks < tb->sleeping_ticks)
+    {
+      return true;
+    }
+  return false;
+}
+
+bool cmp_priority (const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)  //HB ADDED 
+{
+  struct thread *ta = list_entry(a, struct thread, elem);
+  struct thread *tb = list_entry(b, struct thread, elem);
+  if (ta->priority > tb->priority)
+    {
+      return true;
+    }
+  return false;
+}
+
+void test_max_priority (void) //HB ADDED 
+{
+  if ( list_empty(&ready_list) )
+    {
+      return;
+    }
+  struct thread *t = list_entry(list_front(&ready_list),
+        struct thread, elem);
+  if (intr_context())
+    {
+      thread_ticks++;
+      if ( thread_current()->priority < t->priority ||
+     (thread_ticks >= TIME_SLICE &&
+      thread_current()->priority == t->priority) )
+  {
+    intr_yield_on_return();
+  }
+      return;
+    }
+  if (thread_current()->priority < t->priority)
+    {
+      thread_yield();
+    }
+}
+
+void mlfqs_priority (struct thread *t) //HB ADDED 
+{
+  if (t == idle_thread)
+    {
+      return;
+    }
+  int term1 = int_to_fp(PRI_MAX);
+  int term2 = div_mixed( t->recent_cpu, 4);
+  int term3 = 2*t->nice;
+  term1 = sub_fp(term1, term2);
+  term1 = sub_mixed(term1, term3);
+  t->priority = fp_to_int(term1);
+  if (t->priority < PRI_MIN)
+    {
+      t->priority = PRI_MIN;
+    }
+  if (t->priority > PRI_MAX)
+    {
+      t->priority = PRI_MAX;
+    }
+}
+
+void mlfqs_recent_cpu (struct thread *t) //HB ADDED 
+{
+  if (t == idle_thread)
+    {
+      return;
+    }
+  int term1 = mult_mixed(load_avg, 2);
+  term1 = div_fp(term1, add_mixed(term1, 1) );
+  term1 = mult_fp(term1, t->recent_cpu);
+  t->recent_cpu = add_mixed(term1, t->nice);
+}
+
+void mlfqs_load_avg (void) //HB ADDED 
+{
+  int term2 = list_size(&ready_list);
+  if (thread_current() != idle_thread)
+    {
+      term2++;
+    }
+  int term1 = div_mixed(int_to_fp(59), 60);
+  term1 = mult_fp(term1, load_avg);
+  term2 = div_mixed(int_to_fp(term2), 60);
+  load_avg = add_fp(term1, term2);
+  ASSERT (load_avg >= 0)
+}
+
+void mlfqs_increment (void) //HB ADDED 
+{
+  if (thread_current() == idle_thread)
+    {
+      return;
+    }
+  thread_current()->recent_cpu = add_mixed(
+           thread_current()->recent_cpu, 1);
+}
+
+void mlfqs_recalc (void) //HB ADDED 
+{
+  struct list_elem *e;
+  for (e = list_begin(&all_list); e != list_end(&all_list);
+       e = list_next(e))
+    {
+      struct thread *t = list_entry(e, struct thread, allelem);
+      mlfqs_recent_cpu(t);
+      mlfqs_priority(t);
+    }
+}
+
+void donate_priority (void) //HB ADDED
+{
+  int depth = 0;
+  struct thread *t = thread_current();
+  struct lock *l = t->wantsLock;
+  while (l && depth < DEPTH_LIMIT)
+    {
+      depth++;
+      // If lock is not being held, return
+      if (!l->holder)
+  {
+    return;
+  }
+      if (l->holder->priority >= t->priority)
+  {
+    return;
+  }
+      l->holder->priority = t->priority;
+      t = l->holder;
+      l = t->wantsLock;
+    }
+}
+
+void remove_with_lock(struct lock *lock) //HB ADDED
+{
+  struct list_elem *e = list_begin(&thread_current()->donorList);
+  struct list_elem *next;
+  while (e != list_end(&thread_current()->donorList))
+    {
+      struct thread *t = list_entry(e, struct thread, donationElem);
+      next = list_next(e);
+      if (t->wantsLock == lock)
+  {
+    list_remove(e);
+  }
+      e = next;
+    }
+}
+
+void refresh_priority (void) //HB ADDED 
+{
+  struct thread *t = thread_current();
+  t->priority = t->base_priority;
+  if (list_empty(&t->donorList))
+    {
+      return;
+    }
+  struct thread *s = list_entry(list_front(&t->donorList),
+        struct thread, donationElem);
+  if (s->priority > t->priority)
+    {
+      t->priority = s->priority;
+    }
+}
+//MLFQ POLO!!****
 void
 thread_set_nice (int nice UNUSED) 
+// contains function calls to implemented helper functions
 {
-  /* Not yet implemented. */
+  //MLFQ MARCOOO!!**
+  enum intr_level old_level = intr_disable ();
+  thread_current()->nice = nice;
+  mlfqs_priority(thread_current());
+  test_max_priority();
+  intr_set_level (old_level);
+
+  //MLFQ POLO**!!!!**!*!*
 }
 
 /* Returns the current thread's nice value. */
@@ -461,7 +671,15 @@ int
 thread_get_nice (void) 
 {
   /* Not yet implemented. */
-  return 0;
+
+  //MLFQ MARCOOOO!!!***
+  enum intr_level old_level = intr_disable ();
+  int tmp = thread_current()->nice;
+  intr_set_level (old_level);
+  return tmp;
+  //MLFQ POLOOOO!O!O!O*!*!*
+  //return thread_current() ->nice; //HB mlfq
+
 }
 
 /* Returns 100 times the system load average. */
@@ -469,7 +687,12 @@ int
 thread_get_load_avg (void) 
 {
   /* Not yet implemented. */
-  return 0;
+  //MLFQ MARCOOO!!***
+  enum intr_level old_level = intr_disable ();
+  int tmp = fp_to_int_round( mult_mixed(load_avg, 100) );
+  intr_set_level (old_level);
+  return tmp;
+  //MLFQ POLOOOOO!!**!*!*
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
@@ -477,7 +700,14 @@ int
 thread_get_recent_cpu (void) 
 {
   /* Not yet implemented. */
-  return 0;
+
+  //MLFQ MARCOOOO**!!
+  enum intr_level old_level = intr_disable ();
+  int tmp = fp_to_int_round( mult_mixed(thread_current()->recent_cpu, 100) );
+  intr_set_level (old_level);
+  return tmp;
+  //MLFQ POLO!!!!****
+  //return 0;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -575,6 +805,12 @@ init_thread (struct thread *t, const char *name, int priority)
 
   list_push_back (&all_list, &t->allelem);
   //intr_set_level (old_level);
+
+  //mlfq MARCOOOO!*!*!*!
+  t->nice = NICE_DEFAULT;
+  t->recent_cpu = RECENT_CPU_DEFAULT;
+
+  //mlfq POLOOOO!*!*!*
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -689,4 +925,4 @@ allocate_tid (void)
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
-uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+//uint32_t thread_stack_ofs = offsetof (struct thread, stack);
