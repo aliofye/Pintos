@@ -85,6 +85,9 @@ struct thread
   {
     /* Owned by thread.c. */
 
+    int nice; //mlfq HB ADDED 
+    int recent_cpu; //mlfq HB ADDED 
+
     //MARCO!!!****
     struct semaphore sema;
     int64_t wakeup;
