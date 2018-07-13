@@ -37,7 +37,7 @@
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
-static struct list ready_list;
+//struct list ready_list;
 static struct list sleeping_list;
 
 /* List of all processes.  Processes are added to this list
