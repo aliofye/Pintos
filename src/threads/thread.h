@@ -166,6 +166,11 @@ int thread_get_load_avg (void);
 //the only place that it exists is here so I'm not going to use it 
 
 
+//MLFQ MARCOOO!*!**!*!*!*
+bool cmp_priority (const struct list_elem *a,
+       const struct list_elem *b,
+       void *aux UNUSED);
+//MLFQ POLOOO!*!*!*!*!*
 bool
 thread_higher_priority (const struct list_elem *a_,
                         const struct list_elem *b_,
