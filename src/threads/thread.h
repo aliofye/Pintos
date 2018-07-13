@@ -161,7 +161,7 @@ int thread_get_load_avg (void);
 
 //*********MARCO!!!!
 
-void donate_priority(struct thread*, struct thread *);
+//void donate_priority(struct thread*, struct thread *);
 //donate_priority is not implemented anywhere
 //the only place that it exists is here so I'm not going to use it 
 
