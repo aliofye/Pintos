@@ -41,7 +41,16 @@
      decrement it.
 
    - up or "V": increment the value (and wake up one waiting
+
+
      thread, if any). */
+
+bool
+waiter_higher_priority (struct list_elem *_a,
+                        struct list_elem *_b,
+                         void *aux UNUSED);
+
+
 void
 sema_init (struct semaphore *sema, unsigned value) 
 {
@@ -298,7 +307,7 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   //MARCO!!!****
-  struct thread *t = lock->holder;
+  struct thread *t = lock->holder; //May want to remove 
 
   old_level = intr_disable();
 

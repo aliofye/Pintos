@@ -92,7 +92,28 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
+//HB changes below
 void test_max_priority (void);
+void mlfqs_priority (struct thread *t);
+void mlfqs_recent_cpu (struct thread *t);
+void mlfqs_load_avg (void);
+void mlfqs_increment (void);
+void mlfqs_recalc (void);
+void donate_priority (void);
+void remove_with_lock(struct lock *lock);
+void refresh_priority (void);
+bool cmp_ticks (const struct list_elem *a,
+    const struct list_elem *b,
+    void *aux UNUSED);
+
+
+
+
+
+
+
+
+
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
