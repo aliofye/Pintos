@@ -81,6 +81,8 @@ typedef int tid_t;
    only because they are mutually exclusive: only a thread in the
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list. */
+struct list ready_list; //so it can be used in the other file 
+
 struct thread
   {
     /* Owned by thread.c. */
@@ -145,7 +147,7 @@ const char *thread_name (void);
 
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
-void recompute_thread_priority (struct thread*);
+
 
 /* Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func (struct thread *t, void *aux);
@@ -171,22 +173,7 @@ bool cmp_priority (const struct list_elem *a,
        const struct list_elem *b,
        void *aux UNUSED);
 //MLFQ POLOOO!*!*!*!*!*
-bool
-thread_higher_priority (const struct list_elem *a_,
-                        const struct list_elem *b_,
-                         void *aux UNUSED);
 
-bool
-thread_lower_priority (const struct list_elem *a_,
-                        const struct list_elem *b_,
-                         void *aux UNUSED);
-
-void thread_yield_to_higher_priority (void);
-
-bool
-thread_donor_priority(const struct list_elem *a_,
-                        const struct list_elem *b_,
-                          void *aux UNUSED);
 
 //*********POLO!!!!
 #endif /* threads/thread.h */

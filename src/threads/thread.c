@@ -12,11 +12,14 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "threads/fixed_point.h"
+#include "threads/extra_functions.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
 
 //mlfq MARCOO!*!*!*
+#define NICE_ORIGINAL 35;
+
 #define NICE_DEFAULT 0
 #define NICE_MAX 20
 #define NICE_MIN 20
@@ -29,6 +32,8 @@
 //mlfq POLO!!*!*!*!*
 
 //HENRY MADE A COMMENT
+//HENRY MADE A COMMENT AGAIN! 
+//HENRY MADE ANOTHER COMMENT
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
@@ -36,7 +41,7 @@
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
-static struct list ready_list;
+
 static struct list sleeping_list;
 
 /* List of all processes.  Processes are added to this list
@@ -87,6 +92,7 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
+void test_max_priority (void);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -108,7 +114,7 @@ thread_init (void)
 
   lock_init (&tid_lock);
   list_init (&ready_list);
-  list_init (&sleeping_list);
+  list_init (&sleeping_list); //must stay here 
   list_init (&all_list);
 
   /* Set up a thread structure for the running thread. */
@@ -120,73 +126,8 @@ thread_init (void)
 
 ////*****MARCO!!!!****
 
-/* Returns true if thread a has higher priority than thread b,
- * within a list of threads.
- * (Brian) */
-bool
-thread_higher_priority (const struct list_elem *a_,
-                        const struct list_elem *b_,
-                         void *aux UNUSED)
-{
-  struct thread *a = list_entry (a_, struct thread, elem) ;
-  struct thread *b = list_entry (b_, struct thread, elem) ;
-
-  return a->priority > b->priority;
-}
 
 
-/* Returns true if thread a has lower priority than thread b,
- * within a list of threads.
- * (Brian) */
-bool
-thread_lower_priority (const struct list_elem *a_,
-                        const struct list_elem *b_,
-                         void *aux UNUSED)
-{
-  struct thread *a = list_entry (a_, struct thread, elem) ;
-  struct thread *b = list_entry (b_, struct thread, elem) ;
-
-  return a->priority < b->priority;
-}
-
-bool
-thread_donor_priority(const struct list_elem *a_,
-                        const struct list_elem *b_,
-                          void *aux UNUSED)
-{
-  struct thread *a = list_entry (a_, struct thread, donationElem);
-  struct thread *b = list_entry (b_, struct thread, donationElem);
-
-  return a->priority < b->priority;
-}
-
-
-
-/* If the ready list contains a thread with a higher priority,
- * yields to it.
- * (Brian) */
-void thread_yield_to_higher_priority (void)
-{
-  enum intr_level old_level = intr_disable ();
-
-  if (!list_empty (&ready_list)) {
-    struct thread *cur = thread_current ();
-    struct thread *max = list_entry (list_max (&ready_list,
-          thread_lower_priority, NULL), struct thread, elem);
-    if (max->priority > cur->priority) {
-      if (intr_context ()) {
-        intr_yield_on_return ();
-      }
-      else
-      {
-        thread_yield ();
-      }
-    }
-
-    
-  }
-  intr_set_level (old_level);
-}
 
 //*****POLO!!!!****
 
@@ -347,9 +288,16 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
   //MARCO!!
-  if (priority > thread_current()->priority) {
+  /*if (priority > thread_current()->priority) {
     thread_yield_to_higher_priority();
-  }
+  }*/   //MLFQ CHANGE MADE BY HB
+
+  //MLFQ MARCOOO!*!*!*!*
+  old_level = intr_disable ();
+  test_max_priority();
+  intr_set_level (old_level);
+  //MLFQ POLOOOO!*!*!*!
+
   //POLO!!!!
 
   return tid;
@@ -471,34 +419,7 @@ thread_yield (void)
 }
 
 //MARCO!!!
-void recompute_thread_priority (struct thread* t) {
-   t->priority = 0;
-  if(!list_empty(&t->donorList)){
-    struct thread *donor = list_entry(list_max(&t->donorList, thread_donor_priority, NULL), struct thread, donationElem);
-   
-    if (donor->priority > t->priority){
-      t->priority = donor->priority;
-    }
-    else
-    {
-      if(t->base_priority > t->priority)
-       t->priority = t->base_priority;
-    }
-  }
-  else
-  {
-    t->priority = t->base_priority;
-  }
 
-  if (t->donee != NULL)
-  {
-    recompute_thread_priority(t->donee);
-  }
-}
-
-void sort_ready_list() {
-  list_sort(&ready_list, thread_higher_priority, NULL);
-}
 
 //POLO!!!!
 
@@ -699,16 +620,28 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-  list_init(&t->donorList); //HB MADE CHANGE
+  //list_init(&t->donorList); //HB MADE CHANGE
   t->priority = priority;
-  t->base_priority = priority; //HB MADE CHANGE
+  //t->base_priority = priority; //HB MADE CHANGE
   t->magic = THREAD_MAGIC;
 
   //old_level = intr_disable ();
-  sema_init(&t->sema,0); //HB MADE CHANGE
+  //sema_init(&t->sema,0); //HB MADE CHANGE
 
   list_push_back (&all_list, &t->allelem);
+
+  t->base_priority = priority;
+  t->wantsLock = NULL;
+  list_init(&t->donorList); 
+
+  
   //intr_set_level (old_level);
+
+  //MLFQ MARCOOO!*!*!**
+  t->nice = NICE_DEFAULT;
+  t->recent_cpu = RECENT_CPU_DEFAULT;
+
+  //MLFQ POLOOO!*!*!*!*
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
