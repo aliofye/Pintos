@@ -458,6 +458,7 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
+  //hb3 may want to change again 
   //thread_current ()->priority = new_priority;
   //MARCOOO!!!!**
   enum intr_level old_level;
@@ -850,25 +851,36 @@ void mlfqs_priority (struct thread *t)
 
 void donate_priority (void)
 {
-  int depth = 0;
+
+
+  //int depth = 0;
   struct thread *t = thread_current();
   struct lock *l = t->wantsLock;
-  while (l && depth < DEPTH_LIMIT)
+
+  for(int i =0;i<8;i++)
+  {
+    if(!l)
+      //if it doesn't want the lock then return it 
     {
-      depth++;
-      // If lock is not being held, return
-      if (!l->holder)
-  {
-    return;
-  }
-      if (l->holder->priority >= t->priority)
-  {
-    return;
-  }
-      l->holder->priority = t->priority;
-      t = l->holder;
+      return; 
+    }
+    if(!l->holder || (l->holder->priority >= t->priority))
+      //if it's not the lock holder or 
+      //the current process doesn't need the lock right now 
+      //(it's priority is less )
+    {
+      return;
+    }
+
+    else if(true)
+      //so if it wants the lock then do..
+    {
+      l->holder->priority = t->priority; //set the new priority 
+      t = l->holder; 
       l = t->wantsLock;
     }
+
+  }
 }
 
 void remove_with_lock(struct lock *lock)
