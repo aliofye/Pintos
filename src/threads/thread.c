@@ -18,7 +18,7 @@
 #endif
 
 //mlfq MARCOO!*!*!*
-#define NICE_ORIGINAL 35;
+#define NICE_ORIGINAL 35
 
 #define NICE_DEFAULT 0
 #define NICE_MAX 20
@@ -95,20 +95,13 @@ static tid_t allocate_tid (void);
 //HB changes below
 void test_max_priority (void);
 void mlfqs_priority (struct thread *t);
-void mlfqs_recent_cpu (struct thread *t);
-void mlfqs_load_avg (void);
-void mlfqs_increment (void);
-void mlfqs_recalc (void);
+
 void donate_priority (void);
 void remove_with_lock(struct lock *lock);
 void refresh_priority (void);
-bool cmp_ticks (const struct list_elem *a,
-    const struct list_elem *b,
-    void *aux UNUSED);
-
-
-
-
+bool cmp_priority (const struct list_elem *a,
+       const struct list_elem *b,
+       void *aux UNUSED);
 
 
 
@@ -780,7 +773,7 @@ allocate_tid (void)
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 //MLFQ MARCOO!*!*!*!*!*!*!**!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*
-bool cmp_ticks (const struct list_elem *a,
+/*bool cmp_ticks (const struct list_elem *a,
     const struct list_elem *b,
     void *aux UNUSED)
 {
@@ -791,7 +784,7 @@ bool cmp_ticks (const struct list_elem *a,
       return true;
     }
   return false;
-}
+}*/
 
 bool cmp_priority (const struct list_elem *a,
        const struct list_elem *b,
@@ -853,53 +846,7 @@ void mlfqs_priority (struct thread *t)
     }
 }
 
-void mlfqs_recent_cpu (struct thread *t)
-{
-  if (t == idle_thread)
-    {
-      return;
-    }
-  int term1 = mult_mixed(load_avg, 2);
-  term1 = div_fp(term1, add_mixed(term1, 1) );
-  term1 = mult_fp(term1, t->recent_cpu);
-  t->recent_cpu = add_mixed(term1, t->nice);
-}
 
-void mlfqs_load_avg (void)
-{
-  int term2 = list_size(&ready_list);
-  if (thread_current() != idle_thread)
-    {
-      term2++;
-    }
-  int term1 = div_mixed(int_to_fp(59), 60);
-  term1 = mult_fp(term1, load_avg);
-  term2 = div_mixed(int_to_fp(term2), 60);
-  load_avg = add_fp(term1, term2);
-  ASSERT (load_avg >= 0)
-}
-
-void mlfqs_increment (void)
-{
-  if (thread_current() == idle_thread)
-    {
-      return;
-    }
-  thread_current()->recent_cpu = add_mixed(
-           thread_current()->recent_cpu, 1);
-}
-
-void mlfqs_recalc (void)
-{
-  struct list_elem *e;
-  for (e = list_begin(&all_list); e != list_end(&all_list);
-       e = list_next(e))
-    {
-      struct thread *t = list_entry(e, struct thread, allelem);
-      mlfqs_recent_cpu(t);
-      mlfqs_priority(t);
-    }
-}
 
 void donate_priority (void)
 {
