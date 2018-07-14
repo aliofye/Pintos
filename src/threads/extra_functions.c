@@ -18,48 +18,53 @@
 #endif
 
 
-bool
-thread_higher_priority (const struct list_elem *a_,
-                        const struct list_elem *b_,
-                         void *aux UNUSED)
+bool thread_higher_priority (const struct list_elem *a,const struct list_elem *b)
 {
-  struct thread *a = list_entry (a_, struct thread, elem) ;
-  struct thread *b = list_entry (b_, struct thread, elem) ;
-
-  return a->priority > b->priority;
+  return makeDecisions(a,b,false,true);
 }
 
-
-/* Returns true if thread a has lower priority than thread b,
- * within a list of threads.
- * (Brian) */
-bool
-thread_lower_priority (const struct list_elem *a_,
-                        const struct list_elem *b_,
-                         void *aux UNUSED)
+bool thread_lower_priority (const struct list_elem *a,const struct list_elem *b)
 {
-  struct thread *a = list_entry (a_, struct thread, elem) ;
-  struct thread *b = list_entry (b_, struct thread, elem) ;
 
-  return a->priority < b->priority;
+  return makeDecisions(a,b,false,false);
 }
 
-bool
-thread_donor_priority(const struct list_elem *a_,
-                        const struct list_elem *b_,
-                          void *aux UNUSED)
+bool thread_donor_priority(const struct list_elem *a,const struct list_elem *b)
 {
-  struct thread *a = list_entry (a_, struct thread, donationElem);
-  struct thread *b = list_entry (b_, struct thread, donationElem);
-
-  return a->priority < b->priority;
+  return makeDecisions(a,b,true,true);
 }
 
+bool makeDecisions(const struct list_elem *a, const struct list_elem *b, bool isDonationElem, bool isGreater)
+{
+  if(!isDonationElem)
+    //meaning that it's a elem not a donationElem
+  {
+    struct thread *aa = list_entry (a, struct thread, elem) ;
+    struct thread *bb = list_entry (b, struct thread, elem) ;
 
+    switch(isGreater)
+    {
+      case true:  
+        return aa->priority > bb->priority;
+      case false: 
+        return bb->priority > aa->priority;
+    }
+  }
 
-/* If the ready list contains a thread with a higher priority,
- * yields to it.
- * (Brian) */
+  if(isDonationElem)
+  {
+    struct thread *aa = list_entry (a, struct thread, donationElem);
+    struct thread *bb = list_entry (b, struct thread, donationElem);
+
+    return aa->priority > bb->priority;
+
+  }
+  else
+  {
+    return false;
+  }
+
+}
 void thread_yield_to_higher_priority (void)
 {
   enum intr_level old_level = intr_disable ();
@@ -91,6 +96,8 @@ void thread_yield_to_higher_priority (void)
 }
 
 void recompute_thread_priority (struct thread* t) 
+
+
 {
    t->priority = 0;
   if(!list_empty(&t->donorList)){
