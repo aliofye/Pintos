@@ -67,7 +67,7 @@ bool makeDecisions(const struct list_elem *a, const struct list_elem *b, bool is
 }
 void thread_yield_to_higher_priority (void)
 {
-  enum intr_level old_level = intr_disable ();
+  /*enum intr_level old_level = intr_disable ();
 
   if (!list_empty (&ready_list))
     //if the list is not empty 
@@ -92,39 +92,52 @@ void thread_yield_to_higher_priority (void)
 
     
   }
+  intr_set_level (old_level); */
+  enum intr_level old_level = intr_disable ();
+  struct thread *c = thread_current ();
+  struct thread *m = list_entry (list_max (&ready_list,thread_lower_priority, NULL), struct thread, elem);
+
+  if (!list_empty (&ready_list)) 
+  {
+    
+
+    if (m->priority > c->priority)
+    {
+      if (intr_context ()) 
+      {
+        intr_yield_on_return ();
+      }
+      else if(!( intr_context() )  )
+      {
+        thread_yield ();
+      }
+    }
+
+    
+  }
+  else if(list_empty(&ready_list))
+  {
+    if(false)
+    {
+      thread_yield();
+    }
+    if(true)
+    {
+      intr_set_level(old_level);
+      return;
+    }
+      
+  }
   intr_set_level (old_level);
 }
+
+
 
 void recompute_thread_priority (struct thread* t) 
 
 
 {
-  /*t->priority = 0;
-  if(!list_empty(&t->donorList))
-  {
-    struct thread *donor = list_entry(list_max(&t->donorList, thread_donor_priority, NULL), struct thread, donationElem);
-   
-    if (donor->priority > t->priority)
-    {
-      t->priority = donor->priority;
-    }
-    else
-    {
-      if(t->base_priority > t->priority)
-       t->priority = t->base_priority;
-    }
-  }
-  else
-  {
-    t->priority = t->base_priority;
-  }
-
-  if (t->donee != NULL)
-  {
-    recompute_thread_priority(t->donee);
-  }*/
   t->priority = 0;
-
 
   if(!list_empty(&t->donorList))
   {
