@@ -99,11 +99,13 @@ void recompute_thread_priority (struct thread* t)
 
 
 {
-   t->priority = 0;
-  if(!list_empty(&t->donorList)){
+  /*t->priority = 0;
+  if(!list_empty(&t->donorList))
+  {
     struct thread *donor = list_entry(list_max(&t->donorList, thread_donor_priority, NULL), struct thread, donationElem);
    
-    if (donor->priority > t->priority){
+    if (donor->priority > t->priority)
+    {
       t->priority = donor->priority;
     }
     else
@@ -120,6 +122,53 @@ void recompute_thread_priority (struct thread* t)
   if (t->donee != NULL)
   {
     recompute_thread_priority(t->donee);
+  }*/
+  t->priority = 0;
+
+
+  if(!list_empty(&t->donorList))
+  {
+    struct thread *donor = list_entry(list_max(&t->donorList, thread_donor_priority, NULL), struct thread, donationElem);
+   
+    //if (donor->priority > t->priority){
+    //  t->priority = donor->priority;
+    //}
+    //else
+    //{
+    //  if(t->base_priority > t->priority)
+  //     t->priority = t->base_priority;
+    //}
+    switch(donor->priority > t-> priority )
+    {
+      case false:
+        printf("this shouldn't be exe, in extra_functions \n");
+      case true: 
+        t->priority = donor->priority;
+    }
+    switch (t->base_priority > t->priority)
+    {
+      case true: 
+        if(true)
+          t->priority = t-> base_priority; 
+      case false:
+        break;
+    } 
+
+  }
+  else
+  {
+    t->priority = t->base_priority;
+  }
+
+  if (t->donee != NULL) 
+    //computes whether or not the thread t has actually donated anything, if it
+    //hasn't then call the function again recursively 
+  {
+    recompute_thread_priority(t->donee); 
+  }
+  if(t->donee ==NULL)
+  {
+    return;
   }
 }
 
