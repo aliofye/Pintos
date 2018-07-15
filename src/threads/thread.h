@@ -164,17 +164,12 @@ int thread_get_load_avg (void);
 //*********MARCO!!!!
 
 void donate_priority(void);
-//donate_priority is not implemented anywhere
-//the only place that it exists is here so I'm not going to use it 
+
 
 
 //MLFQ MARCOOO!*!**!*!*!*
-bool cmp_priority (const struct list_elem *a,
-       const struct list_elem *b,
-       void *aux UNUSED);
-void test_max_priority (void);
 void remove_with_lock(struct lock *lock);
-void refresh_priority (void);
+void mlfqs_priority (struct thread *t);
 
 //MLFQ POLOOO!*!*!*!*!*
 

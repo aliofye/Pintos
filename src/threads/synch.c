@@ -150,7 +150,7 @@ sema_up (struct semaphore *sema)
   {
     //thread_yield_to_higher_priority();
     //using new solution here 
-    test_max_priority(); //mlfq HB MADE CHANGE
+    thread_yield_to_higher_priority(); //mlfq HB MADE CHANGE
 
 
   }
@@ -256,7 +256,7 @@ lock_acquire (struct lock *lock)
       thread_current()->wantsLock = lock;
       list_insert_ordered(&lock->holder->donorList,
         &thread_current()->donationElem,
-        (list_less_func *) &cmp_priority, NULL);
+        (list_less_func *) &thread_higher_priority, NULL);
     }
   //MLFQ POLOOOO!*!*!*!
   //POLO000!!!****
@@ -329,9 +329,9 @@ lock_release (struct lock *lock)
   if (!thread_mlfqs)
     {
       remove_with_lock(lock);
-      // ^ Removes threads from donation list waiting for released lock
-      refresh_priority();
-      // ^ Updates priority
+      // Removes threads from donation list waiting for released lock
+      recompute_thread_priority(t);
+
     }
   //MLFQ POLOOO!!**!*!*!*!*!**!*!*!*!*!*!
   sema_up (&lock->semaphore);
@@ -491,9 +491,9 @@ bool cmp_sem_priority (const struct list_elem *a,
     {
       return false;
     }
-  list_sort(&sa->semaphore.waiters, (list_less_func *) &cmp_priority,
+  list_sort(&sa->semaphore.waiters, (list_less_func *) &thread_higher_priority,
       NULL);
-  list_sort(&sb->semaphore.waiters, (list_less_func *) &cmp_priority,
+  list_sort(&sb->semaphore.waiters, (list_less_func *) &thread_higher_priority,
       NULL);
   struct thread *ta = list_entry(list_front(&sa->semaphore.waiters),
          struct thread, elem);

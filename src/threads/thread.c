@@ -93,15 +93,11 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 //HB changes below
-void test_max_priority (void);
-void mlfqs_priority (struct thread *t);
 
+void mlfqs_priority (struct thread *t);
 void donate_priority (void);
 void remove_with_lock(struct lock *lock);
-void refresh_priority (void);
-bool cmp_priority (const struct list_elem *a,
-       const struct list_elem *b,
-       void *aux UNUSED);
+
 
 
 
@@ -308,7 +304,7 @@ thread_create (const char *name, int priority,
 
   //MLFQ MARCOOO!*!*!*!*
   old_level = intr_disable ();
-  test_max_priority();
+  thread_yield_to_higher_priority();
   intr_set_level (old_level);
   //MLFQ POLOOOO!*!*!*!
 
@@ -502,7 +498,7 @@ thread_set_nice (int nice UNUSED)
   enum intr_level old_level = intr_disable ();
   thread_current()->nice = nice;
   mlfqs_priority(thread_current());
-  test_max_priority();
+  thread_yield_to_higher_priority();
   intr_set_level (old_level);
   //MLFQ POLOOO!*!*!*!
 }
@@ -774,82 +770,33 @@ allocate_tid (void)
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 //MLFQ MARCOO!*!*!*!*!*!*!**!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*
-/*bool cmp_ticks (const struct list_elem *a,
-    const struct list_elem *b,
-    void *aux UNUSED)
-{
-  struct thread *ta = list_entry(a, struct thread, elem);
-  struct thread *tb = list_entry(b, struct thread, elem);
-  if (ta->sleeping_ticks < tb->sleeping_ticks)
-    {
-      return true;
-    }
-  return false;
-}*/
 
-bool cmp_priority (const struct list_elem *a,
-       const struct list_elem *b,
-       void *aux UNUSED)
-{
-  struct thread *ta = list_entry(a, struct thread, elem);
-  struct thread *tb = list_entry(b, struct thread, elem);
-  if (ta->priority > tb->priority)
-    {
-      return true;
-    }
-  return false;
-}
-
-void test_max_priority (void)
-{
-  if ( list_empty(&ready_list) )
-    {
-      return;
-    }
-  struct thread *t = list_entry(list_front(&ready_list),
-        struct thread, elem);
-  if (intr_context())
-    {
-      thread_ticks++;
-      if ( thread_current()->priority < t->priority ||
-     (thread_ticks >= TIME_SLICE &&
-      thread_current()->priority == t->priority) )
-  {
-    intr_yield_on_return();
-  }
-      return;
-    }
-  if (thread_current()->priority < t->priority)
-    {
-      thread_yield();
-    }
-}
 
 void mlfqs_priority (struct thread *t)
 {
   if (t == idle_thread)
-    {
-      return;
-    }
-  int term1 = int_to_fp(PRI_MAX);
-  int term2 = div_mixed( t->recent_cpu, 4);
-  int term3 = 2*t->nice;
-  term1 = sub_fp(term1, term2);
-  term1 = sub_mixed(term1, term3);
-  t->priority = fp_to_int(term1);
+    return;
+
+  int first = int_to_fp(PRI_MAX);
+  int second = div_mixed( t->recent_cpu, 4);
+  int third = 2*t->nice;
+
+  first = sub_fp(first, second);
+  first = sub_mixed(first, third);
+  t->priority = fp_to_int(first);
   if (t->priority < PRI_MIN)
-    {
-      t->priority = PRI_MIN;
-    }
+  {
+    t->priority = PRI_MIN;
+  }
   if (t->priority > PRI_MAX)
-    {
-      t->priority = PRI_MAX;
-    }
+  {
+    t->priority = PRI_MAX;
+  }
 }
 
-
-
 void donate_priority (void)
+//donates its priority if the current process cannot execute it's CS 
+
 {
 
 
@@ -884,34 +831,20 @@ void donate_priority (void)
 }
 
 void remove_with_lock(struct lock *lock)
+//go through donors to see who has the lock 
 {
   struct list_elem *e = list_begin(&thread_current()->donorList);
   struct list_elem *next;
   while (e != list_end(&thread_current()->donorList))
+    //iterate through the whole list until the end 
     {
       struct thread *t = list_entry(e, struct thread, donationElem);
       next = list_next(e);
       if (t->wantsLock == lock)
-  {
-    list_remove(e);
-  }
+      {
+        list_remove(e); //if it has the lock take it off 
+      }
       e = next;
-    }
-}
-
-void refresh_priority (void)
-{
-  struct thread *t = thread_current();
-  t->priority = t->base_priority;
-  if (list_empty(&t->donorList))
-    {
-      return;
-    }
-  struct thread *s = list_entry(list_front(&t->donorList),
-        struct thread, donationElem);
-  if (s->priority > t->priority)
-    {
-      t->priority = s->priority;
     }
 }
 //MLFQ POLOOOO!*!*!*!*!*!*!**!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*
