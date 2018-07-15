@@ -497,7 +497,9 @@ thread_set_nice (int nice UNUSED)
   //MLFQ MARCOOO!*!*!*!
   enum intr_level old_level = intr_disable ();
   thread_current()->nice = nice;
-  mlfqs_priority(thread_current());
+  if(thread_current()!=idle_thread)
+    mlfqs_priority(thread_current());
+
   thread_yield_to_higher_priority();
   intr_set_level (old_level);
   //MLFQ POLOOO!*!*!*!
@@ -773,9 +775,10 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 
 void mlfqs_priority (struct thread *t)
+//where t is the current thread,
+//this is the thread that is being passed in 
 {
-  if (t == idle_thread)
-    return;
+  
 
   int first = int_to_fp(PRI_MAX);
   int second = div_mixed( t->recent_cpu, 4);
@@ -784,14 +787,29 @@ void mlfqs_priority (struct thread *t)
   first = sub_fp(first, second);
   first = sub_mixed(first, third);
   t->priority = fp_to_int(first);
-  if (t->priority < PRI_MIN)
+  if(t->priority==PRI_MAX || t->priority ==PRI_MIN)
+    //if the priority is zero or 63 then return it 
   {
-    t->priority = PRI_MIN;
+    return;
+  }
+  if (t->priority < PRI_MIN)
+    //if the priority is less than zero (if the priority somehow becomes negative)
+  {
+    t->priority = PRI_MIN; //change it back to the minimum priority 
+  }
+  if(t->priority>=PRI_MIN || t->priority <=PRI_MAX)
+    //after fixing properly or not fixing at all, 
+    //return if there's no need to change anything else
+  {
+    return;
   }
   if (t->priority > PRI_MAX)
+    //if the priority is greater than 
   {
     t->priority = PRI_MAX;
   }
+  else
+    return;
 }
 
 void donate_priority (void)
