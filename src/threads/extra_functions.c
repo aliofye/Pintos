@@ -189,3 +189,40 @@ void sort_ready_list(void)
 {
   list_sort(&ready_list, thread_higher_priority, NULL);
 }
+
+void iterateThrough(struct list_elem * element, struct lock * lock)
+{
+  struct list_elem * next;
+  bool isTrue=true;
+  
+
+
+ while (element != list_end(&thread_current()->donorList))
+    {
+      isTrue=false;
+      struct thread *t = list_entry(element, struct thread, donationElem);
+      next = list_next(element);
+
+      switch(!(t->wantsLock==lock))
+      {
+        case true:
+          element=next;
+          isTrue=true;
+          break;
+        case false:
+          list_remove(element);
+      }
+      if(isTrue)
+        continue;
+      element=next;
+
+      /*if (t->wantsLock == lock)
+       {
+        list_remove(element);
+       }
+      element = next;*/
+    }
+
+
+    
+}

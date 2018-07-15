@@ -22,6 +22,7 @@ void sort_ready_list(void);
 
 bool makeDecisions(const struct list_elem *a, const struct list_elem *b, bool isDonationElem, bool isGreater);
 
+void iterateThrough(struct list_elem * element, struct lock * lock);
 
 
 

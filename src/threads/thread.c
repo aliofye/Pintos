@@ -848,22 +848,15 @@ void donate_priority (void)
   }
 }
 
+
 void remove_with_lock(struct lock *lock)
 //go through donors to see who has the lock 
 {
   struct list_elem *e = list_begin(&thread_current()->donorList);
-  struct list_elem *next;
-  while (e != list_end(&thread_current()->donorList))
-    //iterate through the whole list until the end 
-    {
-      struct thread *t = list_entry(e, struct thread, donationElem);
-      next = list_next(e);
-      if (t->wantsLock == lock)
-      {
-        list_remove(e); //if it has the lock take it off 
-      }
-      e = next;
-    }
+  //struct list_elem *next;
+  iterateThrough(e,lock); // takes the lock off the element   
 }
+
+
 //MLFQ POLOOOO!*!*!*!*!*!*!**!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*
 
