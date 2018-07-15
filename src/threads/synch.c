@@ -45,13 +45,8 @@
 
      thread, if any). */
 
-/*bool
-waiter_higher_priority (struct list_elem *_a,
-                        struct list_elem *_b,
-                         void *aux UNUSED);*/
 
-bool cmp_sem_priority(const struct list_elem *a,
-           const struct list_elem *b);
+bool semaphoreWaiter(const struct list_elem *a,const struct list_elem *b);
 
 void
 sema_init (struct semaphore *sema, unsigned value) 
@@ -91,7 +86,7 @@ sema_down (struct semaphore *sema)
       //MLFQ POLOOO!*!*!*!
       //list_push_back (&sema->waiters, &thread_current ()->elem);
       //HB MADE BELOW CHANGE
-      list_insert_ordered(&sema->waiters, &thread_current ()->elem, thread_higher_priority, NULL);
+      list_insert_ordered(&sema->waiters, &thread_current ()->elem, greater_than_31, NULL);
 
       thread_block ();
     }
@@ -141,7 +136,7 @@ sema_up (struct semaphore *sema)
   if (!list_empty (&sema->waiters)) 
   {
     //MARCO!!!
-    list_sort(&sema->waiters,thread_higher_priority,NULL);
+    list_sort(&sema->waiters,greater_than_31,NULL);
     t=list_entry(list_pop_front(&sema->waiters), struct thread, elem);
     thread_unblock(t);
 
@@ -157,17 +152,10 @@ sema_up (struct semaphore *sema)
     break;
 
     case false:
-      thread_yield_to_higher_priority();
+      let_higher_go_first();
 
   }
-  /*if (!intr_context())
-  {
-    //thread_yield_to_higher_priority();
-    //using new solution here 
-    thread_yield_to_higher_priority(); //mlfq HB MADE CHANGE
-
-
-  }*/
+  
 
   
 
@@ -262,7 +250,7 @@ lock_acquire (struct lock *lock)
   if (!thread_mlfqs && lock->holder)
     {
       thread_current()->wantsLock = lock;
-      list_insert_ordered(&lock->holder->donorList,&thread_current()->donationElem,(list_less_func *) &thread_higher_priority, NULL);
+      list_insert_ordered(&lock->holder->donorList,&thread_current()->donationElem,(list_less_func *) &greater_than_31, NULL);
     } 
 
   //MLFQ POLOOOO!*!*!*!
@@ -326,7 +314,7 @@ lock_release (struct lock *lock)
       break;
     case false:
       remove_with_lock(lock);
-      recompute_thread_priority(thread_current());
+      newPriority(thread_current());
   }
 
   sema_up (&lock->semaphore);
@@ -418,7 +406,7 @@ cond_wait (struct condition *cond, struct lock *lock)
 
 
   list_insert_ordered (&cond->waiters, &waiter.elem,
-           (list_less_func *) &cmp_sem_priority, NULL); //MLFQ HB MADE CHANGE
+           (list_less_func *) &semaphoreWaiter, NULL); //MLFQ HB MADE CHANGE
 
   //POLO!!!
   lock_release (lock);
@@ -443,7 +431,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
 
   if (!list_empty (&cond->waiters)) 
   {
-    list_sort(&cond->waiters, (list_less_func *) &cmp_sem_priority,NULL); //MLFQ HB MADE CHANGE
+    list_sort(&cond->waiters, (list_less_func *) &semaphoreWaiter,NULL); //MLFQ HB MADE CHANGE
     sema_up (&list_entry (list_pop_front (&cond->waiters),struct semaphore_elem, elem)->semaphore);
   }
 }

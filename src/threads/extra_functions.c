@@ -20,18 +20,18 @@
 //int listCalls=0;
 
 
-bool thread_higher_priority (const struct list_elem *a,const struct list_elem *b)
+bool greater_than_31 (const struct list_elem *a,const struct list_elem *b)
 {
   return makeDecisions(a,b,false,true);
 }
 
-bool thread_lower_priority (const struct list_elem *a,const struct list_elem *b)
+bool less_than_31 (const struct list_elem *a,const struct list_elem *b)
 {
 
   return makeDecisions(a,b,false,false);
 }
 
-bool thread_donor_priority(const struct list_elem *a,const struct list_elem *b)
+bool donorUpdate(const struct list_elem *a,const struct list_elem *b)
 {
   return makeDecisions(a,b,true, true);
 }
@@ -71,12 +71,12 @@ bool makeDecisions(const struct list_elem *a, const struct list_elem *b, bool is
   }
 
 }
-void thread_yield_to_higher_priority (void)
+void let_higher_go_first (void)
 {
   
   enum intr_level old_level = intr_disable ();
   struct thread *c = thread_current ();
-  struct thread *m = list_entry (list_max (&ready_list,thread_lower_priority, NULL), struct thread, elem);
+  struct thread *m = list_entry (list_max (&ready_list,less_than_31, NULL), struct thread, elem);
 
   if (!list_empty (&ready_list)) 
   {
@@ -114,7 +114,7 @@ void thread_yield_to_higher_priority (void)
 
 
 
-void recompute_thread_priority (struct thread* t) 
+void newPriority (struct thread* t) 
 //input thread is the current thread
 
 {
@@ -122,7 +122,7 @@ void recompute_thread_priority (struct thread* t)
 
   if(!list_empty(&t->donorList))
   {
-    struct thread *donor = list_entry(list_max(&t->donorList, thread_donor_priority, NULL), struct thread, donationElem);
+    struct thread *donor = list_entry(list_max(&t->donorList, donorUpdate, NULL), struct thread, donationElem);
   
     switch(donor->priority > t-> priority )
     {
@@ -150,7 +150,7 @@ void recompute_thread_priority (struct thread* t)
     //computes whether or not the thread t has actually donated anything, if it
     //hasn't then call the function again recursively 
   {
-    recompute_thread_priority(t->donee); 
+    newPriority(t->donee); 
   }
   if(t->donee ==NULL)
   {
@@ -158,9 +158,9 @@ void recompute_thread_priority (struct thread* t)
   }
 }
 
-void sort_ready_list(void)
+void callListSort(void)
 {
-  list_sort(&ready_list, thread_higher_priority, NULL);
+  list_sort(&ready_list, greater_than_31, NULL);
 }
 
 void iterateThrough(struct list_elem * element, struct lock * lock)
@@ -202,8 +202,7 @@ bool isEmpty(struct semaphore_elem * a)
     return false; //it's not empty 
 }
 
-bool cmp_sem_priority (const struct list_elem *a,
-           const struct list_elem *b)
+bool semaphoreWaiter (const struct list_elem *a,const struct list_elem *b)
 {
   struct semaphore_elem *sa = list_entry(a, struct semaphore_elem, elem);
   struct semaphore_elem *sb = list_entry(b, struct semaphore_elem, elem);
@@ -215,8 +214,8 @@ bool cmp_sem_priority (const struct list_elem *a,
   else if ( isEmpty(sa) )
       return false;
   
-  list_sort(&sa->semaphore.waiters, &thread_higher_priority,NULL);
-  list_sort(&sb->semaphore.waiters, &thread_higher_priority,NULL);
+  list_sort(&sa->semaphore.waiters, &greater_than_31,NULL);
+  list_sort(&sb->semaphore.waiters, &greater_than_31,NULL);
   //listCalls=1;
 
   return waiterPriority(sa,sb); //returns true if a is the higher of the two priorities of 
