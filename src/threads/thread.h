@@ -163,16 +163,17 @@ int thread_get_load_avg (void);
 
 //*********MARCO!!!!
 
-void donate_priority(void);
+
 
 
 
 //MLFQ MARCOOO!*!**!*!*!*
-void remove_with_lock(struct lock *lock);
-void mlfqs_priority (struct thread *t);
+void currentDonor(void);
+void hasLock(struct lock *lock);
+void fixedPointMlfq (struct thread *t);
 
 //MLFQ POLOOO!*!*!*!*!*
 
 
 //*********POLO!!!!
-#endif /* threads/thread.h */
+#endif 

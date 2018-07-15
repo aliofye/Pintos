@@ -81,7 +81,7 @@ sema_down (struct semaphore *sema)
         case true:
           //printf("in sema_down() shouldn't be executing");
         case false:
-          donate_priority();
+          currentDonor();
       }
       //MLFQ POLOOO!*!*!*!
       //list_push_back (&sema->waiters, &thread_current ()->elem);
@@ -313,7 +313,7 @@ lock_release (struct lock *lock)
     case true:
       break;
     case false:
-      remove_with_lock(lock);
+      hasLock(lock);
       newPriority(thread_current());
   }
 

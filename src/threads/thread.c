@@ -94,9 +94,9 @@ void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 //HB changes below
 
-void mlfqs_priority (struct thread *t);
-void donate_priority (void);
-void remove_with_lock(struct lock *lock);
+void fixedPointMlfq (struct thread *t);
+void currentDonor (void);
+void hasLock(struct lock *lock);
 
 
 
@@ -496,8 +496,18 @@ thread_set_nice (int nice UNUSED)
   //MLFQ MARCOOO!*!*!*!
   enum intr_level old_level = intr_disable ();
   thread_current()->nice = nice;
-  if(thread_current()!=idle_thread)
-    mlfqs_priority(thread_current());
+  switch(thread_current()==idle_thread)
+  {
+    case true:
+      //printf("this shouldn't be exec");
+
+    case false:
+      fixedPointMlfq(thread_current());
+
+
+
+  }
+    
 
   let_higher_go_first();
   intr_set_level (old_level);
@@ -505,16 +515,18 @@ thread_set_nice (int nice UNUSED)
 }
 
 /* Returns the current thread's nice value. */
-int
+int 
 thread_get_nice (void)  //MLFQ HB MADE CHANGE
 {
   /* Not yet implemented. */
   //return 0;
   //MLFQ MARCOOO!*!*!*!
+  ASSERT(NICE_ORIGINAL==35);
+
   enum intr_level old_level = intr_disable ();
-  int tmp = thread_current()->nice;
+  int old = thread_current()->nice;
   intr_set_level (old_level);
-  return tmp;
+  return old;
   //MLFQ POLOOO!*!*!*!
 }
 
@@ -527,10 +539,17 @@ thread_get_load_avg (void) //MLFQ HB MADE CHANGE
   /* Not yet implemented. */
   //return 0;
   //MLFQ MARCOO!*!*!*
-  enum intr_level old_level = intr_disable ();
-  int tmp = fixRound( multFixInt(load_avg, 100) );
-  intr_set_level (old_level);
-  return tmp;
+
+  int old=0;
+  while(true)
+  {
+    enum intr_level old_level = intr_disable ();
+    old = fixRound( multFixInt(load_avg, 100) );
+    intr_set_level (old_level);
+    break;
+    
+  }
+  return old;
   //MLFQ POLOOOO!*!*!*
 }
 
@@ -543,9 +562,12 @@ thread_get_recent_cpu (void)
   /* Not yet implemented. */
   //MLFQ MARCOOO!*!*!
   enum intr_level old_level = intr_disable ();
-  int tmp = fixRound( multFixInt(thread_current()->recent_cpu, 100) );
+
+  int old = fixRound( multFixInt(thread_current()->recent_cpu, 100) );
+  //call the functions in fixed_point.h
+  //reset the interrupt level 
   intr_set_level (old_level);
-  return tmp;
+  return old; 
   //return 0;
   //MLFQ POLOOOOO!*!*!
 
@@ -655,7 +677,9 @@ init_thread (struct thread *t, const char *name, int priority)
 
   //MLFQ MARCOOO!*!*!**
   t->nice = NICE_DEFAULT;
-  t->recent_cpu = RECENT_CPU_DEFAULT;
+
+  //declared at the top of the file as 8
+  t->recent_cpu = RECENT_CPU_DEFAULT; 
 
   //MLFQ POLOOO!*!*!*!*
 }
@@ -777,7 +801,7 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 //MLFQ MARCOO!*!*!*!*!*!*!**!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*
 
 
-void mlfqs_priority (struct thread *t)
+void fixedPointMlfq (struct thread *t)
 //where t is the current thread,
 //this is the thread that is being passed in 
 {
@@ -815,7 +839,7 @@ void mlfqs_priority (struct thread *t)
     return;
 }
 
-void donate_priority (void)
+void currentDonor (void)
 //donates its priority if the current process cannot execute it's CS 
 
 {
@@ -852,7 +876,7 @@ void donate_priority (void)
 }
 
 
-void remove_with_lock(struct lock *lock)
+void hasLock(struct lock *lock)
 //go through donors to see who has the lock 
 {
   struct list_elem *e = list_begin(&thread_current()->donorList);

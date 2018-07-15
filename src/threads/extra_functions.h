@@ -9,17 +9,20 @@
 //extern bool listCalls;
 
 
+void newPriority (struct thread*);
+
+void let_higher_go_first (void);
 
 bool greater_than_31 (const struct list_elem*,
                         const struct list_elem *);
 
 bool less_than_31 (const struct list_elem *,const struct list_elem *);
 
-void let_higher_go_first (void);
+
 
 bool donorUpdate(const struct list_elem *,const struct list_elem *);
 
-void newPriority (struct thread*);
+
 
 void callListSort(void);
 
