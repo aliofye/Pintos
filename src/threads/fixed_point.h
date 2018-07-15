@@ -1,48 +1,44 @@
-#define F (1 << 14)
-#define INT_MAX ((1 << 31) - 1)
-#define INT_MIN (-(1 << 31))
+#ifndef THREADS_FIXED_POINT_H
+#define THREADS_FIXED_POINT_H
+#define H (1 << 14)
 
-// x and y denote fixed_point numbers in 17.14 format
-// n is an integer
+#define INT_MAX (1*(1 << 31) - 1)
+#define INT_MIN (-1(1 << 31))
 
-int mult_mixed(int x, int y);
-int div_fp(int x, int y);
-int div_mixed(int x, int n);
-int sub_fp(int x, int y);
-int sub_mixed(int x, int n);
-int mult_fp(int x, int y);
-int int_to_fp(int n);
-int fp_to_int_round(int x);
-int fp_to_int(int x);
-int add_fp(int x, int y);
-int add_mixed(int x, int n);
+// according to stanford site, define functions in fixed_point.h and call them in 
+// thread.c
 
 
 
+int multFixInt(int i, int k);
+int divFixInt(int i, int k);
+int subFix(int i, int j);
+int subFixInt(int i, int k);
+int intToFix(int k);
+int fixRound(int i);
+int fixInt(int i);
+//such that i+j are fixed point and k is an integer value
 
 
-int fp_to_int_round(int x)
+int fixRound(int i)
 {
-  if (x >= 0)
+  if (i >= 0)
     {
-      return (x + F / 2) / F;
+      return (i + H / 2) / H;
     }
   else
     {
-      return (x - F / 2) / F;
+      return (i - H / 2) / H;
     }
 }
-int mult_fp(int x, int y)   {return ((int64_t) x) * y / F;}
-int mult_mixed(int x, int n){return x * n;}
 
-int add_mixed(int x, int n) {return x + int_to_fp(n);}
-int sub_mixed(int x, int n) {return x - int_to_fp(n);}
+int multFixInt(int i, int k)   {return i * k;} 
+int subFixInt(int i, int k) {return i - intToFix(k);}
 
-int int_to_fp(int n)        {return n * F;}
-int fp_to_int(int x)        {return x / F;}
+int intToFix(int k)        {return k*H;}
+int fixInt(int i)        {return i/H;}
 
-int add_fp(int x, int y)    {return x + y;}
-int sub_fp(int x, int y)    {return x - y;}
+int subFix(int i, int j)    {return i - j;}
+int divFixInt(int i, int k) {return i / k;}
 
-int div_fp(int x, int y)    {return ((int64_t) x) * F / y;}
-int div_mixed(int x, int n) {return x / n;}
+#endif

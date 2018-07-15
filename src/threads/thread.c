@@ -521,12 +521,14 @@ thread_get_nice (void)  //MLFQ HB MADE CHANGE
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) //MLFQ HB MADE CHANGE
+//Returns 100 times the current system load average, 
+//rounded to the nearest integer.
 {
   /* Not yet implemented. */
   //return 0;
   //MLFQ MARCOO!*!*!*
   enum intr_level old_level = intr_disable ();
-  int tmp = fp_to_int_round( mult_mixed(load_avg, 100) );
+  int tmp = fixRound( multFixInt(load_avg, 100) );
   intr_set_level (old_level);
   return tmp;
   //MLFQ POLOOOO!*!*!*
@@ -535,11 +537,13 @@ thread_get_load_avg (void) //MLFQ HB MADE CHANGE
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
+//Returns 100 times the current thread's recent_cpu value,
+// rounded to the nearest integer.
 {
   /* Not yet implemented. */
   //MLFQ MARCOOO!*!*!
   enum intr_level old_level = intr_disable ();
-  int tmp = fp_to_int_round( mult_mixed(thread_current()->recent_cpu, 100) );
+  int tmp = fixRound( multFixInt(thread_current()->recent_cpu, 100) );
   intr_set_level (old_level);
   return tmp;
   //return 0;
@@ -779,13 +783,13 @@ void mlfqs_priority (struct thread *t)
 {
   
 
-  int first = int_to_fp(PRI_MAX);
-  int second = div_mixed( t->recent_cpu, 4);
+  int first = intToFix(PRI_MAX);
+  int second = divFixInt( t->recent_cpu, 4);
   int third = 2*t->nice;
 
-  first = sub_fp(first, second);
-  first = sub_mixed(first, third);
-  t->priority = fp_to_int(first);
+  first = subFix(first, second);
+  first = subFixInt(first, third);
+  t->priority = fixInt(first);
   if(t->priority==PRI_MAX || t->priority ==PRI_MIN)
     //if the priority is zero or 63 then return it 
   {
