@@ -67,32 +67,7 @@ bool makeDecisions(const struct list_elem *a, const struct list_elem *b, bool is
 }
 void thread_yield_to_higher_priority (void)
 {
-  /*enum intr_level old_level = intr_disable ();
-
-  if (!list_empty (&ready_list))
-    //if the list is not empty 
-   {
-    struct thread *cur = thread_current ();
-    struct thread *max = list_entry (list_max (&ready_list,
-          thread_lower_priority, NULL), struct thread, elem);
-    if (max->priority > cur->priority)
-
-     {
-      if (intr_context ()) 
-
-      {
-        intr_yield_on_return ();
-      }
-      else
-
-      {
-        thread_yield ();
-      }
-    }
-
-    
-  }
-  intr_set_level (old_level); */
+  
   enum intr_level old_level = intr_disable ();
   struct thread *c = thread_current ();
   struct thread *m = list_entry (list_max (&ready_list,thread_lower_priority, NULL), struct thread, elem);
@@ -134,7 +109,7 @@ void thread_yield_to_higher_priority (void)
 
 
 void recompute_thread_priority (struct thread* t) 
-
+//input thread is the current thread
 
 {
   t->priority = 0;
@@ -142,15 +117,7 @@ void recompute_thread_priority (struct thread* t)
   if(!list_empty(&t->donorList))
   {
     struct thread *donor = list_entry(list_max(&t->donorList, thread_donor_priority, NULL), struct thread, donationElem);
-   
-    //if (donor->priority > t->priority){
-    //  t->priority = donor->priority;
-    //}
-    //else
-    //{
-    //  if(t->base_priority > t->priority)
-  //     t->priority = t->base_priority;
-    //}
+  
     switch(donor->priority > t-> priority )
     {
       case false:
@@ -215,14 +182,35 @@ void iterateThrough(struct list_elem * element, struct lock * lock)
       if(isTrue)
         continue;
       element=next;
+    }   
+}
 
-      /*if (t->wantsLock == lock)
-       {
-        list_remove(element);
-       }
-      element = next;*/
+bool cmp_sem_priority (const struct list_elem *a,
+           const struct list_elem *b)
+{
+  struct semaphore_elem *sa = list_entry(a, struct semaphore_elem, elem);
+  struct semaphore_elem *sb = list_entry(b, struct semaphore_elem, elem);
+  // Get semaphore with highest waiter priority
+  
+  if ( list_empty(&sb->semaphore.waiters) )
+    {
+      return true;
     }
-
-
-    
+  if ( list_empty(&sa->semaphore.waiters) )
+    {
+      return false;
+    }
+  list_sort(&sa->semaphore.waiters, (list_less_func *) &thread_higher_priority,
+      NULL);
+  list_sort(&sb->semaphore.waiters, (list_less_func *) &thread_higher_priority,
+      NULL);
+  struct thread *ta = list_entry(list_front(&sa->semaphore.waiters),
+         struct thread, elem);
+  struct thread *tb = list_entry(list_front(&sb->semaphore.waiters),
+         struct thread, elem);
+  if (ta->priority > tb->priority)
+    {
+      return true;
+    }
+  return false;
 }

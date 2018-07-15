@@ -24,6 +24,9 @@ bool makeDecisions(const struct list_elem *a, const struct list_elem *b, bool is
 
 void iterateThrough(struct list_elem * element, struct lock * lock);
 
+bool cmp_sem_priority (const struct list_elem *a,
+           const struct list_elem *b);
+
 
 
 #endif

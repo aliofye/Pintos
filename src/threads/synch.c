@@ -50,6 +50,8 @@ waiter_higher_priority (struct list_elem *_a,
                         struct list_elem *_b,
                          void *aux UNUSED);
 
+bool cmp_sem_priority(const struct list_elem *a,
+           const struct list_elem *b);
 
 void
 sema_init (struct semaphore *sema, unsigned value) 
@@ -79,10 +81,12 @@ sema_down (struct semaphore *sema)
   while (sema->value == 0) 
     {
       //MLFQ MARCOOO!*!*!*!
-      if(!thread_mlfqs)
+      switch(thread_mlfqs)
       {
-        donate_priority();
-
+        case true:
+          //printf("in sema_down() shouldn't be executing");
+        case false:
+          donate_priority();
       }
       //MLFQ POLOOO!*!*!*!
       //list_push_back (&sema->waiters, &thread_current ()->elem);
@@ -146,14 +150,24 @@ sema_up (struct semaphore *sema)
 
   sema->value++;
   //MARCO!!
-  if (!intr_context())
+  switch(intr_context())
+  {
+    case true:
+    //printf("in sema_up(), this shouldn't be executing")
+    break;
+
+    case false:
+      thread_yield_to_higher_priority();
+
+  }
+  /*if (!intr_context())
   {
     //thread_yield_to_higher_priority();
     //using new solution here 
     thread_yield_to_higher_priority(); //mlfq HB MADE CHANGE
 
 
-  }
+  }*/
 
   
 
@@ -175,8 +189,12 @@ sema_self_test (void)
   printf ("Testing semaphores...");
   sema_init (&sema[0], 0);
   sema_init (&sema[1], 0);
+  //printf("sema is: %d", &sema);
+
   thread_create ("sema-test", PRI_DEFAULT, sema_test_helper, &sema);
   for (i = 0; i < 10; i++) 
+    //runs through all the semaphore up and downs 
+    //sema up starts at 0 , sema down at 1 so its not negative
     {
       sema_up (&sema[0]);
       sema_down (&sema[1]);
@@ -239,25 +257,14 @@ lock_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock));
   //MARCO!!!****
   old_level = intr_disable();
-  /*
-  struct thread *donor = thread_current();
-  if (lock->holder != NULL && donor->priority > lock->holder->priority) //used to kernel panic here!
-  {
-    //donate!
-    donor->wantsLock = lock;
-    donor->donee = lock->holder;
-    list_push_back(&lock->holder->donorList, &donor->donationElem);
-    recompute_thread_priority(donor);
-    sort_ready_list();
-  }*/
-  //MLFQ MARCOO!*!*!*!
+
+
   if (!thread_mlfqs && lock->holder)
     {
       thread_current()->wantsLock = lock;
-      list_insert_ordered(&lock->holder->donorList,
-        &thread_current()->donationElem,
-        (list_less_func *) &thread_higher_priority, NULL);
-    }
+      list_insert_ordered(&lock->holder->donorList,&thread_current()->donationElem,(list_less_func *) &thread_higher_priority, NULL);
+    } 
+
   //MLFQ POLOOOO!*!*!*!
   //POLO000!!!****
   sema_down (&lock->semaphore);
@@ -306,34 +313,22 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  //MARCO!!!****
-  struct thread *t = lock->holder; //May want to remove 
-
   old_level = intr_disable();
 
   // We have to remove the donation from the highest priority thread (the front) 
   // in our waiting list
 
-  /*if(!list_empty(&lock->semaphore.waiters)){
-    struct thread *thrd = list_entry (list_begin(&lock->semaphore.waiters), struct thread, elem);
-    list_remove(&thrd->donationElem);
-    recompute_thread_priority(thrd);
-    thrd->donee = NULL;
-    thrd->wantsLock = NULL;
-    sort_ready_list();
-  } */
-  //POLO!!!!****
-
   lock->holder = NULL;
-  //MLFQ MARCOOO!!**!*!*!*!*!**!*!*!*!*!*!
-  if (!thread_mlfqs)
-    {
-      remove_with_lock(lock);
-      // Removes threads from donation list waiting for released lock
-      recompute_thread_priority(t);
 
-    }
-  //MLFQ POLOOO!!**!*!*!*!*!**!*!*!*!*!*!
+  switch(thread_mlfqs)
+  {
+    case true:
+      break;
+    case false:
+      remove_with_lock(lock);
+      recompute_thread_priority(thread_current());
+  }
+
   sema_up (&lock->semaphore);
   intr_set_level(old_level); //HB MADE CHANGE
 }
@@ -350,21 +345,19 @@ lock_held_by_current_thread (const struct lock *lock)
 }
 
 /* One semaphore in a list. */
-struct semaphore_elem 
-  {
-    int priority;
-    struct list_elem elem;              /* List element. */
-    struct semaphore semaphore;         /* This semaphore. */
-  };
+//struct semaphore_elem 
+  //{
+    //int priority;
+    //struct list_elem elem;              /* List element. */
+    //struct semaphore semaphore;         /* This semaphore. */
+  //};
 
 /* Initializes condition variable COND.  A condition variable
    allows one piece of code to signal a condition and cooperating
    code to receive the signal and act upon it. */
 
 //MLFQ MARCOOO!*!*!*!*!*!
-bool cmp_sem_priority(const struct list_elem *a,
-           const struct list_elem *b,
-           void *aux UNUSED);
+
 //MLFQ POLOOOO!*!*!*!*!*!
 
 
@@ -476,13 +469,13 @@ cond_broadcast (struct condition *cond, struct lock *lock)
 
 
 //MLFQ MARCOOO !*!**!*!*!
-bool cmp_sem_priority (const struct list_elem *a,
-           const struct list_elem *b,
-           void *aux UNUSED)
+/*bool cmp_sem_priority (const struct list_elem *a,
+           const struct list_elem *b)
 {
   struct semaphore_elem *sa = list_entry(a, struct semaphore_elem, elem);
   struct semaphore_elem *sb = list_entry(b, struct semaphore_elem, elem);
   // Get semaphore with highest waiter priority
+
   if ( list_empty(&sb->semaphore.waiters) )
     {
       return true;
@@ -504,5 +497,5 @@ bool cmp_sem_priority (const struct list_elem *a,
       return true;
     }
   return false;
-}
+} */
 //MLFQ POLOOOO!*!**!*!*!!*!*!*!*
