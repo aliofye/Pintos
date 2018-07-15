@@ -45,10 +45,10 @@
 
      thread, if any). */
 
-bool
+/*bool
 waiter_higher_priority (struct list_elem *_a,
                         struct list_elem *_b,
-                         void *aux UNUSED);
+                         void *aux UNUSED);*/
 
 bool cmp_sem_priority(const struct list_elem *a,
            const struct list_elem *b);
@@ -356,10 +356,6 @@ lock_held_by_current_thread (const struct lock *lock)
    allows one piece of code to signal a condition and cooperating
    code to receive the signal and act upon it. */
 
-//MLFQ MARCOOO!*!*!*!*!*!
-
-//MLFQ POLOOOO!*!*!*!*!*!
-
 
 void
 cond_init (struct condition *cond)
@@ -370,17 +366,22 @@ cond_init (struct condition *cond)
 }
 
 //*****MARCO********
-bool
-waiter_higher_priority (struct list_elem *_a,
-                        struct list_elem *_b,
-                         void *aux UNUSED)
+bool waiterPriority(struct semaphore_elem *a, struct semaphore_elem * b)
+
 {
-  struct semaphore_elem *a, *b;
-  a = list_entry (_a, struct semaphore_elem, elem);
-  b = list_entry (_b, struct semaphore_elem, elem);
-  return a->priority > b->priority;
+  struct thread * aa= list_entry(list_front(&a->semaphore.waiters),struct thread, elem);
+  struct thread * bb = list_entry(list_front(&b->semaphore.waiters),struct thread, elem);
+
+  switch(bb->priority > aa->priority)
+  {
+    case false:
+      return true; 
+    case true:
+      break;
+  }
+  return false;
+
 }
-//*****POLOO********
 /* Atomically releases LOCK and waits for COND to be signaled by
    some other piece of code.  After COND is signaled, LOCK is
    reacquired before returning.  LOCK must be held before calling
@@ -414,9 +415,7 @@ cond_wait (struct condition *cond, struct lock *lock)
   sema_init (&waiter.semaphore, 0);
   //MARCO!!
 
-  /*waiter.priority = thread_current()->priority;
-  list_insert_ordered(&cond->waiters, &waiter.elem, waiter_higher_priority, NULL);
-  list_push_back (&cond->waiters, &waiter.elem);*/
+
 
   list_insert_ordered (&cond->waiters, &waiter.elem,
            (list_less_func *) &cmp_sem_priority, NULL); //MLFQ HB MADE CHANGE
@@ -444,10 +443,8 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
 
   if (!list_empty (&cond->waiters)) 
   {
-    list_sort(&cond->waiters, (list_less_func *) &cmp_sem_priority,
-    NULL); //MLFQ HB MADE CHANGE
-    sema_up (&list_entry (list_pop_front (&cond->waiters),
-                          struct semaphore_elem, elem)->semaphore);
+    list_sort(&cond->waiters, (list_less_func *) &cmp_sem_priority,NULL); //MLFQ HB MADE CHANGE
+    sema_up (&list_entry (list_pop_front (&cond->waiters),struct semaphore_elem, elem)->semaphore);
   }
 }
 
@@ -466,36 +463,3 @@ cond_broadcast (struct condition *cond, struct lock *lock)
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
 }
-
-
-//MLFQ MARCOOO !*!**!*!*!
-/*bool cmp_sem_priority (const struct list_elem *a,
-           const struct list_elem *b)
-{
-  struct semaphore_elem *sa = list_entry(a, struct semaphore_elem, elem);
-  struct semaphore_elem *sb = list_entry(b, struct semaphore_elem, elem);
-  // Get semaphore with highest waiter priority
-
-  if ( list_empty(&sb->semaphore.waiters) )
-    {
-      return true;
-    }
-  if ( list_empty(&sa->semaphore.waiters) )
-    {
-      return false;
-    }
-  list_sort(&sa->semaphore.waiters, (list_less_func *) &thread_higher_priority,
-      NULL);
-  list_sort(&sb->semaphore.waiters, (list_less_func *) &thread_higher_priority,
-      NULL);
-  struct thread *ta = list_entry(list_front(&sa->semaphore.waiters),
-         struct thread, elem);
-  struct thread *tb = list_entry(list_front(&sb->semaphore.waiters),
-         struct thread, elem);
-  if (ta->priority > tb->priority)
-    {
-      return true;
-    }
-  return false;
-} */
-//MLFQ POLOOOO!*!**!*!*!!*!*!*!*

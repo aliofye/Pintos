@@ -6,6 +6,9 @@
 #include <stdint.h>
 #include "threads/synch.h" //HB added 
 
+//extern bool listCalls;
+
+
 
 bool thread_higher_priority (const struct list_elem*,
                         const struct list_elem *);
@@ -26,6 +29,10 @@ void iterateThrough(struct list_elem * element, struct lock * lock);
 
 bool cmp_sem_priority (const struct list_elem *a,
            const struct list_elem *b);
+bool isEmpty(struct semaphore_elem * a);
+
+
+
 
 
 

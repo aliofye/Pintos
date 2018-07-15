@@ -48,6 +48,8 @@ void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
 
+bool waiterPriority(struct semaphore_elem *a, struct semaphore_elem * b);
+
 /* Optimization barrier.
 
    The compiler will not reorder operations across an

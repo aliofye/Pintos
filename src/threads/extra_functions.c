@@ -17,6 +17,8 @@
 #include "userprog/process.h"
 #endif
 
+//int listCalls=0;
+
 
 bool thread_higher_priority (const struct list_elem *a,const struct list_elem *b)
 {
@@ -31,11 +33,15 @@ bool thread_lower_priority (const struct list_elem *a,const struct list_elem *b)
 
 bool thread_donor_priority(const struct list_elem *a,const struct list_elem *b)
 {
-  return makeDecisions(a,b,true,true);
+  return makeDecisions(a,b,true, true);
 }
 
 bool makeDecisions(const struct list_elem *a, const struct list_elem *b, bool isDonationElem, bool isGreater)
 {
+  //if(isSemElem)
+  //{
+  //  return
+  //}
   if(!isDonationElem)
     //meaning that it's a elem not a donationElem
   {
@@ -185,6 +191,17 @@ void iterateThrough(struct list_elem * element, struct lock * lock)
     }   
 }
 
+bool isEmpty(struct semaphore_elem * a)
+//checks if the semaphore list is empty 
+{
+  if(list_empty(&a->semaphore.waiters))
+  {
+    return true;  //it is empty so return true
+  }
+  else 
+    return false; //it's not empty 
+}
+
 bool cmp_sem_priority (const struct list_elem *a,
            const struct list_elem *b)
 {
@@ -192,25 +209,16 @@ bool cmp_sem_priority (const struct list_elem *a,
   struct semaphore_elem *sb = list_entry(b, struct semaphore_elem, elem);
   // Get semaphore with highest waiter priority
   
-  if ( list_empty(&sb->semaphore.waiters) )
-    {
+  if ( isEmpty(sb) )
       return true;
-    }
-  if ( list_empty(&sa->semaphore.waiters) )
-    {
+
+  else if ( isEmpty(sa) )
       return false;
-    }
-  list_sort(&sa->semaphore.waiters, (list_less_func *) &thread_higher_priority,
-      NULL);
-  list_sort(&sb->semaphore.waiters, (list_less_func *) &thread_higher_priority,
-      NULL);
-  struct thread *ta = list_entry(list_front(&sa->semaphore.waiters),
-         struct thread, elem);
-  struct thread *tb = list_entry(list_front(&sb->semaphore.waiters),
-         struct thread, elem);
-  if (ta->priority > tb->priority)
-    {
-      return true;
-    }
-  return false;
+  
+  list_sort(&sa->semaphore.waiters, &thread_higher_priority,NULL);
+  list_sort(&sb->semaphore.waiters, &thread_higher_priority,NULL);
+  //listCalls=1;
+
+  return waiterPriority(sa,sb); //returns true if a is the higher of the two priorities of 
+  //the threads created with the semaphores 
 }
