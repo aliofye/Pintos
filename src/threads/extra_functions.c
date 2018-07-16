@@ -18,6 +18,7 @@
 #endif
 
 //int listCalls=0;
+//extern int x =0
 
 
 bool greater_than_31 (const struct list_elem *a,const struct list_elem *b)
@@ -76,6 +77,7 @@ void let_higher_go_first (void)
   
   enum intr_level old_level = intr_disable ();
   struct thread *c = thread_current ();
+
   struct thread *m = list_entry (list_max (&ready_list,less_than_31, NULL), struct thread, elem);
 
   if (!list_empty (&ready_list)) 
@@ -146,13 +148,13 @@ void newPriority (struct thread* t)
     t->priority = t->base_priority;
   }
 
-  if (t->donee != NULL) 
+  if (t->finished != NULL) 
     //computes whether or not the thread t has actually donated anything, if it
     //hasn't then call the function again recursively 
   {
-    newPriority(t->donee); 
+    newPriority(t->finished); //in this case the input thread isn't the current thread
   }
-  if(t->donee ==NULL)
+  if(t->finished ==NULL)
   {
     return;
   }
@@ -204,20 +206,20 @@ bool isEmpty(struct semaphore_elem * a)
 
 bool semaphoreWaiter (const struct list_elem *a,const struct list_elem *b)
 {
-  struct semaphore_elem *sa = list_entry(a, struct semaphore_elem, elem);
-  struct semaphore_elem *sb = list_entry(b, struct semaphore_elem, elem);
+  struct semaphore_elem *aa = list_entry(a, struct semaphore_elem, elem);
+  struct semaphore_elem *bb = list_entry(b, struct semaphore_elem, elem);
   // Get semaphore with highest waiter priority
   
-  if ( isEmpty(sb) )
+  if ( isEmpty(bb) )
       return true;
 
-  else if ( isEmpty(sa) )
+  else if ( isEmpty(aa) )
       return false;
   
-  list_sort(&sa->semaphore.waiters, &greater_than_31,NULL);
-  list_sort(&sb->semaphore.waiters, &greater_than_31,NULL);
+  list_sort(&aa->semaphore.waiters, &greater_than_31,NULL);
+  list_sort(&bb->semaphore.waiters, &greater_than_31,NULL);
   //listCalls=1;
 
-  return waiterPriority(sa,sb); //returns true if a is the higher of the two priorities of 
+  return waiterPriority(aa,bb); //returns true if a is the higher of the two priorities of 
   //the threads created with the semaphores 
 }

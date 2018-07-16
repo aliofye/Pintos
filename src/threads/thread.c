@@ -63,6 +63,7 @@ struct kernel_thread_frame
     void *eip;                  /* Return address. */
     thread_func *function;      /* Function to call. */
     void *aux;                  /* Auxiliary data for function. */
+    int priority;
   };
 
 /* Statistics. */
@@ -81,6 +82,8 @@ bool thread_mlfqs;
 
 int load_avg; //mlfq HB MADE CHANGE
 
+extern int listOrderCalls; 
+
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
@@ -94,7 +97,7 @@ void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 //HB changes below
 
-void fixedPointMlfq (struct thread *t);
+void fixedPointMlfq (void);
 void currentDonor (void);
 void hasLock(struct lock *lock);
 
@@ -134,12 +137,6 @@ thread_init (void)
   initial_thread->tid = allocate_tid ();
 }
 
-////*****MARCO!!!!****
-
-
-
-
-//*****POLO!!!!****
 
 /* Starts preemptive thread scheduling by enabling interrupts.
    Also creates the idle thread. */
@@ -153,7 +150,8 @@ thread_start (void)
 
   load_avg=LOAD_AVG_DEFAULT; //mlfq HB MADE CHANGE
 
-
+  struct thread * t = thread_current();
+  ASSERT(t->priority >=0 && t->priority <=63);
   /* Start preemptive thread scheduling. */
   intr_enable ();
 
@@ -167,6 +165,7 @@ void
 thread_tick (void) 
 {
   struct thread *t = thread_current ();
+  //ASSERT(t->priority >=0 && t->priority <=63);
 
   /* Update statistics. */
   if (t == idle_thread)
@@ -417,7 +416,11 @@ thread_yield (void)
 
   old_level = intr_disable ();
   //MARCO!!!
-  if (cur != idle_thread) 
+  if(cur==idle_thread) //thread it continuously looping for n
+  {
+      ASSERT(cur->priority >=0 && cur->priority <=63);
+  }
+  else if (cur != idle_thread) 
   {
     list_insert_ordered(&ready_list, &cur->elem, greater_than_31, NULL);
   }
@@ -478,13 +481,9 @@ thread_set_priority (int new_priority)
 int
 thread_get_priority (void)  //mlfq HB MADE CHANGE 
 {
-  //return thread_current ()->priority;
-  //mlfq MARCOOO!!*!*!*
-  enum intr_level old_level = intr_disable ();
-  int tmp = thread_current()->priority;
-  intr_set_level (old_level);
-  return tmp;
-  //mlfq POLOOOO!!*!*!*
+  
+  return thread_current() ->priority;
+ 
 
 }
 
@@ -499,10 +498,12 @@ thread_set_nice (int nice UNUSED)
   switch(thread_current()==idle_thread)
   {
     case true:
+      //printf("in thread_set_nice(), thread_priority, %d", thread_current()->priority)
       //printf("this shouldn't be exec");
 
+
     case false:
-      fixedPointMlfq(thread_current());
+      fixedPointMlfq();
 
 
 
@@ -518,16 +519,9 @@ thread_set_nice (int nice UNUSED)
 int 
 thread_get_nice (void)  //MLFQ HB MADE CHANGE
 {
-  /* Not yet implemented. */
-  //return 0;
-  //MLFQ MARCOOO!*!*!*!
-  ASSERT(NICE_ORIGINAL==35);
-
-  enum intr_level old_level = intr_disable ();
-  int old = thread_current()->nice;
-  intr_set_level (old_level);
-  return old;
-  //MLFQ POLOOO!*!*!*!
+  
+  return thread_current() ->nice;
+  
 }
 
 /* Returns 100 times the system load average. */
@@ -540,16 +534,14 @@ thread_get_load_avg (void) //MLFQ HB MADE CHANGE
   //return 0;
   //MLFQ MARCOO!*!*!*
 
-  int old=0;
-  while(true)
-  {
-    enum intr_level old_level = intr_disable ();
-    old = fixRound( multFixInt(load_avg, 100) );
-    intr_set_level (old_level);
-    break;
+  int loadAverage=0;
+
+  
+  loadAverage= fixRound( multFixInt(load_avg, 100) ); //call to fixed_point.h
+ 
     
-  }
-  return old;
+
+  return loadAverage;
   //MLFQ POLOOOO!*!*!*
 }
 
@@ -560,16 +552,13 @@ thread_get_recent_cpu (void)
 // rounded to the nearest integer.
 {
   /* Not yet implemented. */
-  //MLFQ MARCOOO!*!*!
-  enum intr_level old_level = intr_disable ();
 
-  int old = fixRound( multFixInt(thread_current()->recent_cpu, 100) );
+
+  int recentCPU = fixRound( multFixInt(thread_current()->recent_cpu, 100) );
   //call the functions in fixed_point.h
-  //reset the interrupt level 
-  intr_set_level (old_level);
-  return old; 
-  //return 0;
-  //MLFQ POLOOOOO!*!*!
+  
+  return recentCPU;
+
 
 }
 
@@ -668,18 +657,43 @@ init_thread (struct thread *t, const char *name, int priority)
 
   list_push_back (&all_list, &t->allelem);
 
-  t->base_priority = priority;
-  t->wantsLock = NULL;
-  list_init(&t->donorList); 
-
-  
+  if(priority<64 && priority > -1  )
+  {
+    //load is still not working 
+    t->base_priority = priority;
+    t->wantsLock = NULL;
+    list_init(&t->donorList); 
+  }
   //intr_set_level (old_level);
 
   //MLFQ MARCOOO!*!*!**
-  t->nice = NICE_DEFAULT;
+  if(t->nice >NICE_DEFAULT)
+  { 
+    //printf("t->nice %d \n", t->nice);
+    t->nice = NICE_DEFAULT;
+  }
+  else if(t->nice <=NICE_DEFAULT)
+  {
+    //printf("in second else if block ")
+    //printf("t->nice %d \n", t->nice);
+    //mlfq nice tests still aren't working 
+    t->nice =NICE_DEFAULT;
+  }
 
   //declared at the top of the file as 8
-  t->recent_cpu = RECENT_CPU_DEFAULT; 
+
+  if(t->recent_cpu > RECENT_CPU_DEFAULT)
+  {
+    //printf("in first if block ")
+    //printf("t->recent_cpu %d \n", t->recent_cpu); 
+    t->recent_cpu = RECENT_CPU_DEFAULT;
+  }
+  else if(t->recent_cpu <=RECENT_CPU_DEFAULT)
+  {
+    //printf("in second if block ")
+    //printf("t->recent_cpu %d \n", t->recent_cpu); 
+    t->recent_cpu = RECENT_CPU_DEFAULT; 
+  }
 
   //MLFQ POLOOO!*!*!*!*
 }
@@ -801,19 +815,21 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 //MLFQ MARCOO!*!*!*!*!*!*!**!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*!*
 
 
-void fixedPointMlfq (struct thread *t)
-//where t is the current thread,
-//this is the thread that is being passed in 
+void fixedPointMlfq ()
+//does calculations and gets called in earlier functions
 {
-  
+  struct thread * t = thread_current(); 
+  int testp = t->priority;
+  ASSERT (PRI_MIN <= testp && testp <= PRI_MAX);
 
-  int first = intToFix(PRI_MAX);
-  int second = divFixInt( t->recent_cpu, 4);
-  int third = 2*t->nice;
+  int max = intToFix(63);
+  int min=intToFix(0);
+  int first = divFixInt( t->recent_cpu, 4);
+  int second = 2*(t->nice);
 
-  first = subFix(first, second);
-  first = subFixInt(first, third);
-  t->priority = fixInt(first);
+  max = subFix(max, first);
+  max = subFixInt(max, second);
+  t->priority = fixInt(max);
   if(t->priority==PRI_MAX || t->priority ==PRI_MIN)
     //if the priority is zero or 63 then return it 
   {

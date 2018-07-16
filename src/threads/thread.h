@@ -94,7 +94,7 @@ struct thread
     struct semaphore sema;
     int64_t wakeup;
     int base_priority;
-    struct thread * donee;
+    struct thread * finished;
     struct list donorList;
     struct lock *wantsLock;
     struct list_elem donationElem;
@@ -170,7 +170,7 @@ int thread_get_load_avg (void);
 //MLFQ MARCOOO!*!**!*!*!*
 void currentDonor(void);
 void hasLock(struct lock *lock);
-void fixedPointMlfq (struct thread *t);
+void fixedPointMlfq (void);
 
 //MLFQ POLOOO!*!*!*!*!*
 

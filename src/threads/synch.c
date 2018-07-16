@@ -241,6 +241,8 @@ lock_acquire (struct lock *lock)
 {
   enum intr_level old_level;//HB MADE CHANGE
   ASSERT (lock != NULL);
+  //struct thread * t = thread_current();
+  //ASSERT(t>=0 &&t<=63);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
   //MARCO!!!****
@@ -250,7 +252,7 @@ lock_acquire (struct lock *lock)
   if (!thread_mlfqs && lock->holder)
     {
       thread_current()->wantsLock = lock;
-      list_insert_ordered(&lock->holder->donorList,&thread_current()->donationElem,(list_less_func *) &greater_than_31, NULL);
+      list_insert_ordered(&lock->holder->donorList,&thread_current()->donationElem, &greater_than_31, NULL);
     } 
 
   //MLFQ POLOOOO!*!*!*!
@@ -275,14 +277,29 @@ lock_try_acquire (struct lock *lock)
 
   ASSERT (lock != NULL);
   ASSERT (!lock_held_by_current_thread (lock));
+  //struct thread * t = thread_current();
+  //ASSERT(t>=0 &&t<=63);
   enum intr_level old_level = intr_disable(); //MLFQ HB MADE CHANGE
   success = sema_try_down (&lock->semaphore);
+
+  if(!success)
+  {
+    if(thread_current() ->nice ==8)
+    {
+      //thread current has lock but shouldn't 
+      //printf("in try_lock_acquire, success failed")
+     //nice tests keep failing 
+    }
+    
+  }
+
   if (success)
   {
     thread_current() -> wantsLock = NULL; //MLFQ HB MADE CHANGEE
     lock->holder = thread_current ();
 
   }
+
   intr_set_level(old_level);
 
   return success;
@@ -405,12 +422,11 @@ cond_wait (struct condition *cond, struct lock *lock)
 
 
 
-  list_insert_ordered (&cond->waiters, &waiter.elem,
-           (list_less_func *) &semaphoreWaiter, NULL); //MLFQ HB MADE CHANGE
+  list_insert_ordered (&cond->waiters, &waiter.elem,&semaphoreWaiter, NULL); //MLFQ HB MADE CHANGE
 
   //POLO!!!
   lock_release (lock);
-  sema_down (&waiter.semaphore);
+  sema_down (&waiter.semaphore); //decrement 
   lock_acquire (lock);
 }
 
@@ -426,13 +442,23 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
 {
   ASSERT (cond != NULL);
   ASSERT (lock != NULL);
+  struct thread * t = thread_current();
+  ASSERT(t>=0 && t>=63);
   ASSERT (!intr_context ());
   ASSERT (lock_held_by_current_thread (lock));
 
-  if (!list_empty (&cond->waiters)) 
+  switch(list_empty(&cond->waiters))
   {
-    list_sort(&cond->waiters, (list_less_func *) &semaphoreWaiter,NULL); //MLFQ HB MADE CHANGE
-    sema_up (&list_entry (list_pop_front (&cond->waiters),struct semaphore_elem, elem)->semaphore);
+    case true:
+      //printf("in cond_signal(), this shouldn't be executing")
+      //nice tests in mlfq still are not wirking 
+      break;
+
+    case false:
+      list_sort(&cond->waiters,&semaphoreWaiter,NULL); //MLFQ HB MADE CHANGE
+      sema_up (&list_entry (list_pop_front (&cond->waiters),struct semaphore_elem, elem)->semaphore);
+
+
   }
 }
 
