@@ -49,10 +49,15 @@ process_execute (const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   //MARCOOO!*!*!!*
-
+  //@Ali if u have questions on the implementation, 
+  //i found the definition of strtok_r on geeksforgeeks 
+  //this implementation is based on what needs to be passed into strtok_r
+  // it's strtok_r(char *, (what you're breaking the string up by),char **);
+  //strtok isn't exactly what would work b/c it deals more with an input of a char 
+  //rather than a char * 
   char ** pointer; //gets passed into pointer 
   char * newFileName= (char *) file_name; //strtok_r breaks it up but it needs be changed from a char *
-  char * brokenUp = strtok_r(newFileName, " ", pointer); 
+  char * brokenUp = strtok_r(newFileName, " ", pointer); //separates input string by spaces
   //strtok_r needs string.h
 
   
