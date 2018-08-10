@@ -38,6 +38,9 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+  // get executable name from raw name
+  char *save_ptr;
+  file_name = strtok_r (file_name, " ", &save_ptr);
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
@@ -88,7 +91,8 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  return -1;
+  while(true);
+  // return -1;
 }
 
 /* Free the current process's resources. */
@@ -195,7 +199,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
+static bool setup_stack (void **esp, int argc, char* argv[]);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -208,13 +212,24 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
 bool
 load (const char *file_name, void (**eip) (void), void **esp) 
 {
+  // printf("love: %s\n", file_name);
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
   struct file *file = NULL;
   off_t file_ofs;
   bool success = false;
   int i;
-
+  /* Split raw file name into args*/
+  int argc = 0;
+  int argv[99];
+  char *token, *save_ptr;
+  for (token = strtok_r (file_name, " ", &save_ptr); token != NULL;
+        token = strtok_r (NULL, " ", &save_ptr)){
+    // printf ("love: %s\n", token);
+    argv[argc] = token;
+    argc++;
+  }
+  file_name = argv[0];
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL) 
@@ -302,7 +317,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp))
+  if (!setup_stack (esp, argc, argv))
     goto done;
 
   /* Start address. */
@@ -427,19 +442,48 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp) 
+setup_stack (void **esp, int argc, char* argv[]) 
 {
+  // printf("love-stack: %s\n", argv[1]);
   uint8_t *kpage;
   bool success = false;
+  uint8_t word_align = (size_t) *esp % 4;
+  uint32_t ptrs[argc];
 
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-      if (success)
+      if (success) {
         *esp = PHYS_BASE;
-      else
+        // push arguments in reverse order
+        for(int i = argc-1; i>=0; i--){
+          *esp -= strlen(argv[i]) + 1;
+          ptrs[i] = (uint32_t *) *esp;
+          memcpy(*esp, argv[i], strlen(argv[i]) + 1);
+        }
+        // word align
+        *esp = *esp - 4;
+        *(int *) *esp = 0;
+        // push references
+        for(int i= argc-1; i>=0; i--){
+          *esp -= 4;
+          *(uint32_t **) *esp = ptrs[i];
+        }
+        // four zeros
+        *esp = *esp - 4;
+        *(uintptr_t  **) *esp = *esp + 4;
+        // push argc
+        *esp = *esp - 4;
+        memcpy(*esp, &argc, sizeof(int *));
+        // fake return address
+        *esp = *esp - 4;
+        (*(int *)(*esp))=0;
+        //print stack
+        // hex_dump((uintptr_t) *esp, *esp, sizeof(char) * 8, true);        
+      } else {
         palloc_free_page (kpage);
+      }
     }
   return success;
 }
