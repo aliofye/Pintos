@@ -91,8 +91,8 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  while(true);
-  // return -1;
+  thread_sleep(10000);
+  return -1;
 }
 
 /* Free the current process's resources. */

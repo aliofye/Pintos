@@ -1,11 +1,12 @@
-#include "userprog/syscall.h"
 #include <stdio.h>
+#include <stdbool.h>
 #include <syscall-nr.h>
+#include "userprog/syscall.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
+#include "devices/shutdown.h"
 
-int write (int fd, const void *buffer, unsigned size);
-void exit(int status); 
 static void syscall_handler (struct intr_frame *);
 
 void
@@ -17,13 +18,19 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
-  	//cast f->esp into an int*, then dereference it for the SYS_CODE
+	// Check if stack is valid
+	if(!is_valid(f->esp)){
+		exit(-1);
+	}
+
 	int code = *(int*)f->esp;
-	printf("RUN SYSCALL CODE: %i\n", code);
+	
+	// printf("SYSCALL: %i\n", code);
 	
 	switch(code){
 		case SYS_HALT:
-			printf("HALT! YOU SHALL NOT PASS\n");
+			// printf("HALT\n");
+			
 			shutdown_power_off();
 			break;
 
@@ -37,6 +44,8 @@ syscall_handler (struct intr_frame *f UNUSED)
 			break;
 
 		case SYS_WAIT:
+			printf("WAIT\n");
+
 			break;
 
 		case SYS_CREATE:
@@ -56,12 +65,13 @@ syscall_handler (struct intr_frame *f UNUSED)
 
 		case SYS_WRITE:
 		{
+			// printf("WRITE\n");
+
 			int fd = *((int*)f->esp + 1);
 			void *buffer = (void*)(*((int*)f->esp + 2));
 			unsigned size = *((unsigned*)f->esp + 3);
-			//run the syscall, a function of your own making
-			//since this syscall returns a value, the return value should be stored in f->eax
-			// f->eax = write(fd, buffer, size);
+						
+			f->eax = write(fd, buffer, size);
 			break;
 		}
 		case SYS_SEEK:
@@ -75,12 +85,26 @@ syscall_handler (struct intr_frame *f UNUSED)
 	}
 }
 
+bool 
+is_valid(void **esp){
+	if(esp < 0x08048000 || esp > PHYS_BASE){
+		return false;
+	}
+
+	return true;
+}
+
 int
 write(int fd, const void *buffer, unsigned size) {
-	return 0;
+ 	// if file descriptor is STDOUT, write to console
+ 	if(fd == STDOUT_FILENO){
+ 		putbuf(buffer, size);
+ 		return size;
+ 	}
 }
 
 void 
 exit(int status) {
+  printf("%s: exit(%i)\n", thread_current()->name, status);
   thread_exit();
 }
