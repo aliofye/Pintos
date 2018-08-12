@@ -1,3 +1,4 @@
+#define DEBUG 0
 #include <stdio.h>
 #include <stdbool.h>
 #include <syscall-nr.h>
@@ -19,24 +20,36 @@ static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
 	// Check if stack is valid
-	if(!is_valid(f->esp)){
+	if(!is_valid( (void *) f->esp)){
 		exit(-1);
 	}
 
 	int code = *(int*)f->esp;
 	
-	// printf("SYSCALL: %i\n", code);
+
+	#if DEBUG
+	printf("SYSCALL: %i\n", code);
+	#endif
 	
 	switch(code){
 		case SYS_HALT:
-			// printf("HALT\n");
+			
+			#if DEBUG
+			printf("HALT\n");
+			#endif
 			
 			shutdown_power_off();
 			break;
 
 		case SYS_EXIT:
-		{
-			int code = *((int*)f->esp + 4);
+		{	
+			int code = *((int*)f->esp + 1);
+			
+			#if DEBUG
+			printf("EXIT\n");
+			printf("CODE: %i\n", code);
+			#endif
+
 			exit(code);
 			break;	
 		}
@@ -44,7 +57,9 @@ syscall_handler (struct intr_frame *f UNUSED)
 			break;
 
 		case SYS_WAIT:
+			#if DEBUG
 			printf("WAIT\n");
+			#endif
 
 			break;
 
@@ -86,8 +101,8 @@ syscall_handler (struct intr_frame *f UNUSED)
 }
 
 bool 
-is_valid(void **esp){
-	if(esp < 0x08048000 || esp > PHYS_BASE){
+is_valid(void *esp){
+	if(esp < 0x08048000 || esp > PHYS_BASE || esp == NULL){
 		return false;
 	}
 
