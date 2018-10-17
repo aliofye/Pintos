@@ -4,14 +4,17 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/synch.h" //HB added 
+//#include "threads/extra_functions.h"
 
+typedef int fixed_t; //HB mlfq
 /* States in a thread's life cycle. */
 enum thread_status
   {
     THREAD_RUNNING,     /* Running thread. */
     THREAD_READY,       /* Not running but ready to run. */
     THREAD_BLOCKED,     /* Waiting for an event to trigger. */
-    THREAD_DYING        /* About to be destroyed. */
+    THREAD_DYING        /* About to be    destroyed. */
   };
 
 /* Thread identifier type.
@@ -77,19 +80,37 @@ typedef int tid_t;
 /* The `elem' member has a dual purpose.  It can be an element in
    the run queue (thread.c), or it can be an element in a
    semaphore wait list (synch.c).  It can be used these two ways
-   only because they are mutually exclusive: only a thread in the
+   only because they are mutually exclus
+   ive: only a thread in the
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list. */
 struct thread
   {
     /* Owned by thread.c. */
+
+    int nice;  //HB mlfq
+    fixed_t recent_cpu; //HB mlfq
+
+    //MARCO!!!****
+    struct semaphore sema;
+    int64_t wakeup;
+    int base_priority;
+    struct thread * donee;
+    struct list donorList;
+    struct lock *wantsLock;
+    struct list_elem donationElem;
+    struct list_elem waitelem; 
+
+
+    //POLO!!****!*!*!*
+
     tid_t tid;                          /* Thread identifier. */
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
-    int64_t sleeping_ticks;
+    int64_t sleeping_ticks;             //timer implementation
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
@@ -102,9 +123,12 @@ struct thread
     unsigned magic;                     /* Detects stack overflow. */
   };
 
+
+
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
+struct list ready_list; //HB MADE CHANGE
 extern bool thread_mlfqs;
 void thread_sleep (int64_t ticks);
 void thread_wake (int64_t ticks);
@@ -126,6 +150,7 @@ tid_t thread_tid (void);
 const char *thread_name (void);
 
 void thread_exit (void) NO_RETURN;
+
 void thread_yield (void);
 
 /* Performs some operation on thread t, given auxiliary data AUX. */
